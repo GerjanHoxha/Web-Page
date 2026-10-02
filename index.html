@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kingdom 500 - One Family, One Kingdom, One Goal | Viking Rise</title>
+  <meta name="description" content="Kingdom 500 Viking Rise kingdom portal: statistics, leadership roster, active warriors, live alliance chat, player roll call, and KvK war hub.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ============================================================
+       PERSISTENT BACKGROUND LAYERS (never removed from DOM)
+       Music keeps playing because this iframe is NEVER reloaded.
+  ============================================================ -->
+  <canvas id="bg-canvas"></canvas>
+  <canvas id="ember-canvas"></canvas>
+  <canvas id="lightning-canvas"></canvas>
+  <div id="dim-overlay"></div>
+
+  <!-- Peyton Parrish - Valhalla Calling (HIDDEN, PERSISTENT, NEVER RELOADS) -->
+  <iframe id="yt-player-iframe"
+          src="https://www.youtube-nocookie.com/embed/kKAY7YaBVWM?enablejsapi=1&autoplay=1&loop=1&playlist=kKAY7YaBVWM&controls=0"
+          allow="autoplay; encrypted-media"
+          style="position:fixed; top:-9999px; left:-9999px; width:1px; height:1px; opacity:0; pointer-events:none;">
+  </iframe>
+
+  <!-- ============================================================
+       PERSISTENT NAVIGATION (HOME & WHY 500 only)
+  ============================================================ -->
+  <nav class="nav" id="top">
+    <div class="nav-container">
+      <div class="logo" style="cursor:pointer;" id="logo-home">
+        <span class="brand-title">VIKING<small>RISE</small></span>
+        <span class="brand-sub">KINGDOM 500</span>
+      </div>
+      <div class="nav-links">
+        <a href="#" class="nav-link active" data-page="home">HOME</a>
+        <a href="#" class="nav-link" data-page="why">WHY 500</a>
+      </div>
+      <div class="nav-actions">
+        <div class="lang-switch">
+          <button id="lang-en" class="lang-btn active" type="button">EN</button>
+          <span>|</span>
+          <button id="lang-ru" class="lang-btn" type="button">РУ</button>
+        </div>
+        <button id="snd-btn" class="btn-icon" type="button" title="Valhalla Calling Soundtrack">
+          🎵 <span id="snd-btn-text">Valhalla Calling</span>
+        </button>
+        <button id="admin-trigger" class="btn-outline-sm" type="button">
+          🔒 <span>Leaders</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ============================================================
+       SINGLE CONTENT AREA — JS swaps content here, music stays on
+  ============================================================ -->
+  <div id="page-content"></div>
+
+  <!-- ============================================================
+       PERSISTENT FOOTER
+  ============================================================ -->
+  <footer class="footer">
+    <div class="footer-container">
+      <p>Kingdom 500 • One Family, One Kingdom, One Goal. Viking Rise Community Hub.</p>
+      <div class="footer-links">
+        <button id="footer-admin-btn" class="lnk-btn">🔒 Leader Portal</button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       PERSISTENT ADMIN MODAL
+  ============================================================ -->
+  <div id="admin-modal" class="modal-overlay">
+    <div class="modal-card glass-card">
+      <button class="modal-close-btn" id="admin-close">&times;</button>
+      <div class="modal-header">
+        <h2>🔒 LEADERS ONLY PORTAL</h2>
+        <p class="modal-sub">Enter council passcode to update kingdom info and download logs.</p>
+      </div>
+
+      <div id="admin-auth-box" class="admin-form-box">
+        <input type="password" id="admin-passcode" placeholder="Enter Council Passcode" maxlength="30">
+        <button class="btn-primary-block" id="admin-login-btn">Unlock Council Panel</button>
+        <p id="admin-auth-err" class="err-text" style="display:none;"></p>
+      </div>
+
+      <div id="admin-panel" class="admin-panel-content" style="display:none;">
+        <div class="admin-tabs">
+          <button class="admin-tab-btn active" data-tab="cms-stats">📊 Kingdom Stats</button>
+          <button class="admin-tab-btn" data-tab="cms-officers">👑 8 Officers</button>
+          <button class="admin-tab-btn" data-tab="cms-roster">⚔️ Warriors</button>
+          <button class="admin-tab-btn" data-tab="cms-duty">📜 Duty Log</button>
+        </div>
+
+        <div id="cms-stats" class="cms-tab-content active">
+          <h3>Edit Kingdom Live Stats</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Total Kingdom Might</label>
+              <input type="number" id="edit-stat-power" placeholder="3250000000">
+            </div>
+            <div class="form-group">
+              <label>Units Eliminated</label>
+              <input type="number" id="edit-stat-kills" placeholder="28400000">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Active Alliances</label>
+              <input type="number" id="edit-stat-alliances" placeholder="4">
+            </div>
+            <div class="form-group">
+              <label>Kingdom Days Active</label>
+              <input type="number" id="edit-stat-days" placeholder="485">
+            </div>
+          </div>
+          <button class="btn-gold-sm" id="save-stats-btn">Save Stats</button>
+        </div>
+
+        <div id="cms-officers" class="cms-tab-content">
+          <h3>Edit 8 Council Officers & Photos</h3>
+          <div id="officers-editor-list"></div>
+          <button class="btn-gold-sm" id="save-officers-btn" style="margin-top:14px">Save Officers</button>
+        </div>
+
+        <div id="cms-roster" class="cms-tab-content">
+          <h3>Add Warrior to Roster</h3>
+          <div class="form-row">
+            <input type="text" id="new-player-name" placeholder="In-Game Name">
+            <input type="text" id="new-player-ally" placeholder="Alliance Tag (e.g. xHTx)">
+            <input type="number" id="new-player-power" placeholder="Might (e.g. 50000000)">
+            <button class="btn-gold-sm" id="add-player-btn">Add Warrior</button>
+          </div>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-top:8px">Warriors registered: <strong id="cms-player-count">80</strong></p>
+        </div>
+
+        <div id="cms-duty" class="cms-tab-content">
+          <div class="admin-actions-bar">
+            <h3>Duty Registration Log (<span id="duty-count">0</span>)</h3>
+            <button class="btn-gold-sm" id="export-csv-btn">📥 Download CSV</button>
+          </div>
+          <div class="table-container admin-table-container">
+            <table class="roster-table">
+              <thead>
+                <tr><th>Player</th><th>ID</th><th>Alliance</th><th>Might</th><th>Notes</th><th>Time</th></tr>
+              </thead>
+              <tbody id="admin-duty-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

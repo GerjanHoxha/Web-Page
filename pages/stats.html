@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kingdom Stats & Might | Kingdom 500</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="subpage-body">
+  <canvas id="bg-canvas"></canvas>
+  <canvas id="ember-canvas"></canvas>
+  <canvas id="lightning-canvas"></canvas>
+  <iframe id="yt-player-iframe" 
+          src="https://www.youtube-nocookie.com/embed/kKAY7YaBVWM?enablejsapi=1&autoplay=1&loop=1&playlist=kKAY7YaBVWM&controls=0" 
+          allow="autoplay; encrypted-media" 
+          style="position:fixed; top:-9999px; left:-9999px; width:1px; height:1px; opacity:0; pointer-events:none;">
+  </iframe>
+  <div id="dim-overlay"></div>
+
+  <!-- Navigation Bar -->
+  <nav class="nav">
+    <div class="nav-container">
+      <div class="logo">
+        <span class="brand-title">VIKING<small>RISE</small></span>
+        <span class="brand-sub">KINGDOM 500</span>
+      </div>
+      <div class="nav-links">
+        <a href="../index.html">HOME</a>
+        <a href="../index.html#why">WHY 500</a>
+      </div>
+      <div class="nav-actions">
+        <a href="../index.html" class="btn-outline-sm">← Back to Hub</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content subpage-content">
+    <div class="subpage-header">
+      <a href="../index.html" class="back-link">← Back to Kingdom Hub</a>
+      <h1>KINGDOM STATS & POWER</h1>
+      <p class="section-subtitle">Real-time stats tracking our realm's total might, enemy units eliminated, active alliances, and age.</p>
+    </div>
+
+    <section class="section">
+      <div class="stats-grid">
+        <div class="stat-card glass-card">
+          <div class="stat-val" id="stat-power" data-target="3250000000">0</div>
+          <div class="stat-label">Total Kingdom Might</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-val" id="stat-kills" data-target="28400000">0</div>
+          <div class="stat-label">Enemy Units Eliminated</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-val" id="stat-alliances" data-target="4">0</div>
+          <div class="stat-label">Core War Alliances</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-val" id="stat-days" data-target="485">0</div>
+          <div class="stat-label">Kingdom Days Active</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-container">
+      <p>Kingdom 500 • One Family, One Kingdom, One Goal. Viking Rise Community Hub.</p>
+    </div>
+  </footer>
+
+  <script type="module" src="../src/main.js"></script>
+</body>
+</html>

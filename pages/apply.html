@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roll Call - Report for Duty | Kingdom 500</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="subpage-body">
+  <canvas id="bg-canvas"></canvas>
+  <canvas id="ember-canvas"></canvas>
+  <canvas id="lightning-canvas"></canvas>
+  <iframe id="yt-player-iframe" 
+          src="https://www.youtube-nocookie.com/embed/dK42W-P3f5U?enablejsapi=1&autoplay=1&loop=1&playlist=dK42W-P3f5U&controls=0" 
+          allow="autoplay; encrypted-media" 
+          style="position:fixed; top:-9999px; left:-9999px; width:1px; height:1px; opacity:0; pointer-events:none;">
+  </iframe>
+  <div id="dim-overlay"></div>
+
+  <!-- Navigation Bar -->
+  <nav class="nav">
+    <div class="nav-container">
+      <div class="logo">
+        <span class="brand-title">VIKING<small>RISE</small></span>
+        <span class="brand-sub">KINGDOM 500</span>
+      </div>
+      <div class="nav-links">
+        <a href="../index.html">HOME</a>
+        <a href="../index.html#why">WHY 500</a>
+      </div>
+      <div class="nav-actions">
+        <a href="../index.html" class="btn-outline-sm">← Back to Hub</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content subpage-content">
+    <div class="subpage-header">
+      <a href="../index.html" class="back-link">← Back to Kingdom Hub</a>
+      <h1>ROLL CALL - REPORT FOR DUTY</h1>
+      <p class="section-subtitle">Sign in so council leaders know your troop strength and readiness for the upcoming KvK campaign.</p>
+    </div>
+
+    <section class="section">
+      <div class="form-container glass-card">
+        <form id="roll-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reg-name">In-Game Name *</label>
+              <input type="text" id="reg-name" required maxlength="24" placeholder="e.g. Thor_Ragnarok">
+            </div>
+            <div class="form-group">
+              <label for="reg-id">Player ID</label>
+              <input type="text" id="reg-id" maxlength="16" placeholder="e.g. 50098231">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="reg-ally">Alliance Tag</label>
+              <select id="reg-ally">
+                <option value="xHTx">xHTx - House of Thor</option>
+                <option value="xVGx">xVGx - Valhalla Guard</option>
+                <option value="xNKx">xNKx - Norse Kings</option>
+                <option value="xRAx">xRAx - Rune Academy</option>
+                <option value="Independent">Independent / Immigrant</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="reg-might">Estimated Might (e.g. 45M)</label>
+              <input type="text" id="reg-might" maxlength="12" placeholder="e.g. 52M">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-notes">War Readiness / Notes</label>
+            <input type="text" id="reg-notes" maxlength="100" placeholder="e.g. T5 unlocked, active during EU war zone">
+          </div>
+
+          <button class="btn-primary-block" type="submit" id="roll-submit-btn">
+            🛡️ Report for Duty
+          </button>
+        </form>
+
+        <div id="roll-status-msg" class="status-msg" style="display:none;"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-container">
+      <p>Kingdom 500 • One Family, One Kingdom, One Goal. Viking Rise Community Hub.</p>
+    </div>
+  </footer>
+
+  <script type="module" src="../src/main.js"></script>
+</body>
+</html>
