@@ -11,12 +11,12 @@ import { I18nEngine } from './i18n.js';
 import { AdminEngine } from './admin.js';
 import { leaders, initialPlayers, defaultStats, channels, initialChatMessages, initialActivityFeed, generate80Players } from './data.js';
 
-// ─── State ────────────────────────────────────────────────────────────────────
+// ─── State ───────────────────────────────────────────────────────────
 let audioEngine, canvasEngine, i18nEngine, adminEngine;
 let players = loadPlayers();
 let currentPage = 'home';
 
-// ─── Boot ─────────────────────────────────────────────────────────────────────
+// ─── Boot ───────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   canvasEngine = new CanvasEngine();
   audioEngine  = new AudioEngine();
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
   navigate(hashPage);
 });
 
-// ─── Router ───────────────────────────────────────────────────────────────────
+// ─── Router ──────────────────────────────────────────────────────────
 function navigate(page) {
   currentPage = page;
   window._currentPage = page;  // used by admin.js to refresh current view
@@ -77,7 +77,7 @@ function navigate(page) {
   }
 }
 
-// ─── Back button helper ────────────────────────────────────────────────────────
+// ─── Back button helper ──────────────────────────────────────────────────────
 function backBtn() {
   return `<button class="back-link" onclick="window.navigateSPA('home')">← Back to Kingdom Hub</button>`;
 }
@@ -94,7 +94,7 @@ function formatNumber(val) {
   return val;
 }
 
-// ─── Player persistence ───────────────────────────────────────────────────────
+// ─── Player persistence ──────────────────────────────────────────────────────
 function loadPlayers() {
   try { return JSON.parse(localStorage.getItem('k500_players')) || generate80Players(); }
   catch { return generate80Players(); }
@@ -103,17 +103,15 @@ function savePlayers() {
   localStorage.setItem('k500_players', JSON.stringify(players));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 //  PAGE TEMPLATES
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 
-// ── HOME ──────────────────────────────────────────────────────────────────────
+// ── HOME ────────────────────────────────────────────────────────────
 function renderHome() {
   return `
   <header class="hero" id="hero-section">
     <div class="aurora-glow"></div>
-    <div class="side-banner left"><div class="banner-icon">⚡</div><div class="banner-text"><b>HOUSE OF THOR</b><em>[xHTx] Main Alliance</em></div></div>
-    <div class="side-banner right"><div class="banner-icon">⚔️</div><div class="banner-text"><b>VALHALLA GUARD</b><em>[xVGx] Vanguard Alliance</em></div></div>
 
     <div class="hero-center">
       <p class="hero-subtitle">LOOKING FOR A NEW HOME?</p>
@@ -124,13 +122,7 @@ function renderHome() {
               <stop offset="0%" stop-color="#fff5c0"/><stop offset="50%" stop-color="#e6b84c"/><stop offset="100%" stop-color="#8a5a12"/>
             </linearGradient>
           </defs>
-          <g><rect x="196" y="20" width="8" height="190" rx="4" fill="#5c3818"/><path d="M200 24 C150 4 112 40 128 88 C160 72 186 72 200 84Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="2"/></g>
-          <g><rect x="196" y="20" width="8" height="190" rx="4" fill="#5c3818"/><path d="M200 24 C250 4 288 40 272 88 C240 72 214 72 200 84Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="2"/></g>
-          <path d="M166 62 C140 56 128 30 140 8 C146 34 160 44 172 50Z" fill="url(#gold-grad)"/>
-          <path d="M234 62 C260 56 272 30 260 8 C254 34 240 44 228 50Z" fill="url(#gold-grad)"/>
-          <path d="M160 150 C158 80 242 80 240 150Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="2"/>
-          <rect x="195" y="110" width="10" height="50" fill="url(#gold-grad)"/>
-          <rect x="172" y="118" width="56" height="8" fill="#120a02"/>
+          <g><rect x="196" y="20" width="8" height="190" rx="4" fill="#5c3818"/><path d="M200 24 C150 4 112 40 128 88 C160 72 186 72 200 84Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="2"/><path d="M200 24 C250 4 288 40 272 88 C240 72 214 72 200 84Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="2"/><path d="M166 62 C140 56 128 30 140 8 C146 34 160 44 172 50Z" fill="url(#gold-grad)"/><path d="M234 62 C260 56 272 30 260 8 C254 34 240 44 228 50Z" fill="url(#gold-grad)"/><path d="M160 150 C158 80 242 80 240 150Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="2"/><rect x="195" y="110" width="10" height="50" fill="url(#gold-grad)"/><rect x="172" y="118" width="56" height="8" fill="#120a02"/></g>
         </svg>
         <div class="hero-plaque"><h1>KINGDOM 500</h1></div>
       </div>
@@ -201,7 +193,7 @@ function afterHome() {
   initFeed();
 }
 
-// ── WHY 500 ───────────────────────────────────────────────────────────────────
+// ── WHY 500 ───────────────────────────────────────────────────────────
 function renderWhy() {
   return `
   <main class="main-content subpage-content">
@@ -212,16 +204,16 @@ function renderWhy() {
     </div>
     <section class="section">
       <div class="cards-grid">
-        <div class="card glass-card"><div class="card-icon">🛡️</div><h3 style="color:var(--ice)">One Family First</h3><p class="card-text">Nobody fights alone. Every player is supported by dedicated leaders and KvK veterans.</p></div>
-        <div class="card glass-card"><div class="card-icon">⚡</div><h3 style="color:var(--gold)">24/7 Global Presence</h3><p class="card-text">Chat, voice, rallies and defense runs around the clock across all global time zones.</p></div>
-        <div class="card glass-card"><div class="card-icon">👑</div><h3 style="color:var(--crimson-light)">One Unified Goal</h3><p class="card-text">We plan war campaigns together, share rewards fairly and conquer as one unified kingdom.</p></div>
-        <div class="card glass-card"><div class="card-icon">📜</div><h3 style="color:var(--ice-glow)">Zero Drama & Fair Loot</h3><p class="card-text">Transparent council decisions, automated KvK reward distribution, zero-drama enforcement.</p></div>
+        <div class="card glass-card"><div class="card-icon">🛡️</div><h3 style="color:var(--ice)">One Family First</h3><p class="card-text">Nobody fights alone. Every player is supported by dedicated leaders and trusted allies.</p></div>
+        <div class="card glass-card"><div class="card-icon">⚡</div><h3 style="color:var(--gold)">24/7 Global Presence</h3><p class="card-text">Chat, voice, rallies and defense runs around the clock.</p></div>
+        <div class="card glass-card"><div class="card-icon">👑</div><h3 style="color:var(--crimson-light)">One Unified Goal</h3><p class="card-text">We plan war campaigns together, share reward intel and hold a single strategic direction.</p></div>
+        <div class="card glass-card"><div class="card-icon">📜</div><h3 style="color:var(--ice-glow)">Zero Drama & Fair Loot</h3><p class="card-text">Transparent council decisions, automated KvK rules and consistent support for every member.</p></div>
       </div>
     </section>
   </main>`;
 }
 
-// ── STATS ─────────────────────────────────────────────────────────────────────
+// ── STATS ───────────────────────────────────────────────────────────
 function renderStats() {
   const s = JSON.parse(localStorage.getItem('k500_custom_stats') || JSON.stringify(defaultStats));
   return `
@@ -248,7 +240,7 @@ function afterStats() {
   });
 }
 
-// ── LEADERSHIP ────────────────────────────────────────────────────────────────
+// ── LEADERSHIP ──────────────────────────────────────────────────────────
 function renderLeadership() {
   const officers = JSON.parse(localStorage.getItem('k500_officers') || JSON.stringify(leaders));
   const cards = officers.map(o => `
@@ -277,7 +269,7 @@ function renderLeadership() {
 
 function afterLeadership() {}
 
-// ── ROSTER ────────────────────────────────────────────────────────────────────
+// ── ROSTER ───────────────────────────────────────────────────────────
 function renderRoster() {
   return `
   <main class="main-content subpage-content">
@@ -346,7 +338,7 @@ function renderTable() {
     </tr>`).join('');
 }
 
-// ── APPLY ─────────────────────────────────────────────────────────────────────
+// ── APPLY ───────────────────────────────────────────────────────────
 function renderApply() {
   return `
   <main class="main-content subpage-content">
@@ -407,7 +399,7 @@ function handleRollSubmit(e) {
     power = v;
   }
 
-  const entry = { rank: players.length + 1, name, id: id || `ID-${Math.floor(Math.random()*900000+100000)}`, alliance: ally, power, kills: Math.floor(power*0.08), share: '2.5%', status: 'Active', notes, registeredAt: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) };
+  const entry = { rank: players.length + 1, name, id: id || `ID-${Math.floor(Math.random()*900000+100000)}`, alliance: ally, power, kills: Math.floor(power*0.08), share: '2.5%', status: 'Active', notes: notes || 'Ready for first call' };
   players.unshift(entry);
   savePlayers();
 
@@ -421,7 +413,7 @@ function handleRollSubmit(e) {
   document.getElementById('roll-form').reset();
 }
 
-// ─── Animated Counter ─────────────────────────────────────────────────────────
+// ─── Animated Counter ───────────────────────────────────────────────────────
 function animateCounter(el, target) {
   let current = 0;
   const steps = 60;
@@ -433,7 +425,7 @@ function animateCounter(el, target) {
   }, 30);
 }
 
-// ─── Chat ─────────────────────────────────────────────────────────────────────
+// ─── Chat ───────────────────────────────────────────────────────────
 let chatMessages = [];
 try { chatMessages = JSON.parse(localStorage.getItem('k500_chat')) || [...initialChatMessages]; } catch { chatMessages = [...initialChatMessages]; }
 
