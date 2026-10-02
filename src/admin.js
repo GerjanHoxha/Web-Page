@@ -33,7 +33,8 @@ export class AdminEngine {
     this.modal?.addEventListener('click', e => {
       if (e.target === this.modal) this.close();
     });
-    document.getElementById('export-csv-btn')?.addEventListener('click', () => this._exportCSV());
+    
+    // Tab switching
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
       btn.addEventListener('click', e => {
         document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
@@ -42,10 +43,14 @@ export class AdminEngine {
         document.getElementById(e.currentTarget.dataset.tab)?.classList.add('active');
       });
     });
+
+    // Save buttons
     document.getElementById('save-stats-btn')?.addEventListener('click', () => this._saveStats());
     document.getElementById('save-officers-btn')?.addEventListener('click', () => this._saveOfficers());
     document.getElementById('add-player-btn')?.addEventListener('click', () => this._addPlayer());
     document.getElementById('save-activity-btn')?.addEventListener('click', () => this._saveActivityFeed());
+    document.getElementById('export-csv-btn')?.addEventListener('click', () => this._exportCSV());
+    document.getElementById('clear-feed-btn')?.addEventListener('click', () => this._clearActivityFeed());
   }
 
   openModal() {
@@ -63,6 +68,7 @@ export class AdminEngine {
     if (this.authBox)  this.authBox.style.display  = 'flex';
     if (this.panelBox) this.panelBox.style.display = 'none';
     if (this.errTxt)   this.errTxt.style.display   = 'none';
+    if (this.passIn)   this.passIn.value = '';
   }
 
   _showPanel() {
@@ -86,6 +92,7 @@ export class AdminEngine {
         this.errTxt.style.display = 'block';
         this.errTxt.textContent = '❌ Invalid Passcode. Access Denied.';
       }
+      this.audio?.playClick();
     }
   }
 
@@ -110,6 +117,7 @@ export class AdminEngine {
     localStorage.setItem('k500_custom_stats', JSON.stringify(stats));
     if (window._currentPage === 'stats') window.navigateSPA('stats');
     this._toast('✅ Kingdom Stats saved!');
+    this.audio?.playClick();
   }
 
   // ── Officers ──────────────────────────────────────────────────────────
@@ -150,6 +158,7 @@ export class AdminEngine {
     localStorage.setItem('k500_officers', JSON.stringify(saved));
     if (window._currentPage === 'leadership') window.navigateSPA('leadership');
     this._toast('✅ Council Officers updated!');
+    this.audio?.playClick();
   }
 
   // ── Roster ──────────────────────────────────────────────────────────
@@ -157,7 +166,7 @@ export class AdminEngine {
     const name  = document.getElementById('new-player-name')?.value.trim();
     const ally  = document.getElementById('new-player-ally')?.value.trim() || 'xHTx';
     const power = parseInt(document.getElementById('new-player-power')?.value) || 35_000_000;
-    if (!name) return;
+    if (!name) { this._toast('❌ Enter warrior name!'); return; }
     this.roster.players.unshift({
       rank: this.roster.players.length + 1,
       name, alliance: ally, power,
@@ -168,6 +177,8 @@ export class AdminEngine {
     const cnt = document.getElementById('cms-player-count');
     if (cnt) cnt.textContent = this.roster.players.length;
     this._toast(`✅ Warrior ${name} added!`);
+    this.audio?.playClick();
+    if (window._currentPage === 'roster') window.navigateSPA('roster');
     ['new-player-name','new-player-ally','new-player-power'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
@@ -175,33 +186,88 @@ export class AdminEngine {
 
   // ── Activity feed editor ───────────────────────────────────────────────
   _loadActivityFeed() {
-    const area = document.getElementById('activity-feed-editor');
-    if (!area) return;
+    const titleInput = document.getElementById('activity-title-input');
+    const textInput = document.getElementById('activity-text-input');
+    const timeInput = document.getElementById('activity-time-input');
+    const feedPreview = document.getElementById('activity-feed-preview');
+    
     const items = JSON.parse(localStorage.getItem('k500_activity_feed') || '[]');
-    if (!items.length) {
-      area.value = `🏆|KvK Stage 2 Victorious!|Kingdom 500 secured #1 rank in Kingdom vs Kingdom honor points.|12 mins ago\n⚔️|Dragon Shrine Captured|Alliance [xHTx] successfully garrisoned the Central Dragon Shrine.|45 mins ago\n📜|New Treaty Signed|Council published updated KvK loot distribution rules.|2 hours ago`;
-      return;
+    
+    if (feedPreview) {
+      if (!items.length) {
+        feedPreview.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">No activity feed entries yet.</p>';
+      } else {
+        feedPreview.innerHTML = items.map((item, idx) => `
+          <div class="feed-preview-item" style="background:rgba(0,0,0,0.3);padding:12px;border-radius:6px;margin-bottom:8px;border-left:3px solid var(--gold)">
+            <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+              <div style="flex:1">
+                <div style="font-size:1.4rem;margin-bottom:4px">${item.icon || '⚔️'}</div>
+                <h4 style="color:var(--gold-light);margin-bottom:4px">${item.title || 'War Activity'}</h4>
+                <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:4px">${item.text || ''}</p>
+                <span style="font-size:0.75rem;color:var(--text-muted)">${item.time || 'Just now'}</span>
+              </div>
+              <button class="btn-gold-sm" style="padding:4px 8px;font-size:0.7rem" onclick="window.adminEngine._deleteActivityItem(${idx})">Remove</button>
+            </div>
+          </div>`).join('');
+      }
     }
-    area.value = items.map(item => `${item.icon || '⚔️'}|${item.title || ''}|${item.text || ''}|${item.time || 'Just now'}`).join('\n');
   }
 
   _saveActivityFeed() {
-    const area = document.getElementById('activity-feed-editor');
-    if (!area) return;
-    const lines = area.value.split('\n').map(line => line.trim()).filter(Boolean);
-    const items = lines.map(line => {
-      const parts = line.split('|');
-      return {
-        icon: (parts[0] || '⚔️').trim(),
-        title: (parts[1] || 'War Activity').trim(),
-        text: (parts[2] || '').trim(),
-        time: (parts[3] || 'Just now').trim()
-      };
-    }).filter(item => item.title || item.text);
+    const titleInput = document.getElementById('activity-title-input');
+    const textInput = document.getElementById('activity-text-input');
+    const timeInput = document.getElementById('activity-time-input');
+    
+    const title = titleInput?.value.trim();
+    const text = textInput?.value.trim();
+    const time = timeInput?.value.trim() || 'Just now';
+    
+    if (!title && !text) {
+      this._toast('❌ Enter title or description!');
+      return;
+    }
 
+    const items = JSON.parse(localStorage.getItem('k500_activity_feed') || '[]');
+    items.unshift({
+      icon: '⚔️',
+      title: title || 'War Activity',
+      text: text || '',
+      time: time
+    });
+
+    // Keep only last 20 items
+    if (items.length > 20) items.pop();
+    
     localStorage.setItem('k500_activity_feed', JSON.stringify(items));
+    
+    // Clear inputs
+    if (titleInput) titleInput.value = '';
+    if (textInput) textInput.value = '';
+    if (timeInput) timeInput.value = '';
+    
+    this._loadActivityFeed();
+    this._toast('✅ Activity entry added!');
+    this.audio?.playClick();
+    
     if (window._currentPage === 'home') window.navigateSPA('home');
-    this._toast('✅ War activity feed updated!');
+  }
+
+  _deleteActivityItem(idx) {
+    const items = JSON.parse(localStorage.getItem('k500_activity_feed') || '[]');
+    items.splice(idx, 1);
+    localStorage.setItem('k500_activity_feed', JSON.stringify(items));
+    this._loadActivityFeed();
+    this._toast('✅ Entry removed!');
+    this.audio?.playClick();
+  }
+
+  _clearActivityFeed() {
+    if (confirm('🔥 Clear ALL activity feed entries?')) {
+      localStorage.removeItem('k500_activity_feed');
+      this._loadActivityFeed();
+      this._toast('✅ Feed cleared!');
+      this.audio?.playClick();
+    }
   }
 
   // ── Duty log ──────────────────────────────────────────────────────────
@@ -229,19 +295,21 @@ export class AdminEngine {
   // ── CSV Export ─────────────────────────────────────────────────────────
   _exportCSV() {
     const log = JSON.parse(localStorage.getItem('k500_duty_log') || '[]');
-    if (!log.length) { alert('No duty entries to export!'); return; }
+    if (!log.length) { this._toast('❌ No duty entries to export!'); return; }
     const hdr = ['In-Game Name','Player ID','Alliance Tag','Might','Notes','Registration Time'];
     const rows = log.map(r => [r.name, r.id||'', r.alliance, r.power, r.notes||'', r.registeredAt||''].map(v => `"${v}"`));
     const csv  = 'data:text/csv;charset=utf-8,' + encodeURIComponent([hdr.join(','), ...rows.map(r => r.join(','))].join('\n'));
     const a = Object.assign(document.createElement('a'), { href: csv, download: `K500_Duty_${new Date().toISOString().slice(0,10)}.csv` });
     document.body.appendChild(a); a.click(); a.remove();
+    this._toast('✅ CSV downloaded!');
+    this.audio?.playClick();
   }
 
   _toast(msg) {
     const t = document.createElement('div');
-    t.style.cssText = 'position:fixed;bottom:80px;right:24px;background:rgba(34,197,94,0.15);border:1px solid #22c55e;color:#4ade80;padding:12px 20px;border-radius:8px;font-size:0.9rem;z-index:99;';
+    t.style.cssText = 'position:fixed;bottom:80px;right:24px;background:rgba(34,197,94,0.15);border:1px solid #22c55e;color:#4ade80;padding:12px 20px;border-radius:8px;font-size:0.9rem;z-index:99;animation:slideIn 0.3s ease-out;';
     t.textContent = msg;
     document.body.appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 3000);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 3000);
   }
 }
