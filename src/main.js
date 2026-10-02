@@ -15,6 +15,7 @@ import { leaders, initialPlayers, defaultStats, channels, initialChatMessages, i
 let audioEngine, canvasEngine, i18nEngine, adminEngine;
 let players = loadPlayers();
 let currentPage = 'home';
+let savedChatNick = localStorage.getItem('k500_chat_nick') || '';
 
 // ─── Boot ───────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -173,8 +174,11 @@ function renderHome() {
         <div class="section-header align-left"><h2>LIVE KINGDOM CHAT</h2><div class="header-divider"></div></div>
         <div class="chat-box glass-card">
           <div class="chat-messages" id="chat-messages"></div>
+          <div class="chat-rules-note" style="padding:12px; background:rgba(0,0,0,0.3); border-radius:6px; margin-bottom:10px; font-size:0.85rem; color:var(--text-muted); text-align:center;">
+            ⚔️ <strong>KEEP THE ALLIANCE OATH</strong> — Respect all warriors. No drama, only strategy and honor.
+          </div>
           <form class="chat-input-form" id="chat-form">
-            <input type="text" id="chat-nick" placeholder="Nickname" maxlength="16" value="Warrior_500">
+            <input type="text" id="chat-nick" placeholder="Enter your warrior name" maxlength="16" value="">
             <input type="text" id="chat-text" placeholder="Say something, warrior..." maxlength="200" required>
             <button class="btn-gold-sm" type="submit">Send</button>
           </form>
@@ -427,18 +431,28 @@ function animateCounter(el, target) {
 
 // ─── Chat ───────────────────────────────────────────────────────────
 let chatMessages = [];
-try { chatMessages = JSON.parse(localStorage.getItem('k500_chat')) || [...initialChatMessages]; } catch { chatMessages = [...initialChatMessages]; }
+try { chatMessages = JSON.parse(localStorage.getItem('k500_chat')) || []; } catch { chatMessages = []; }
 
 const BOT_NICKS  = ["Ragnar_Ironclad","Shieldmaiden_Helga","Viking_Beast","Skald_Gunnar","Asgard_Warlord"];
 const BOT_QUOTES = ["Gathering speedups for KvK Gate 3!","Who needs dragon shrine title buff?","Kingdom 500 is unstoppable!","Rally on pass in 10 minutes! Join up!","Just upgraded to T5 Infantry!"];
 
 function initChat() {
+  const nickInput = document.getElementById('chat-nick');
+  if (nickInput && savedChatNick) {
+    nickInput.value = savedChatNick;
+  }
+
   renderChatMessages();
   document.getElementById('chat-form')?.addEventListener('submit', e => {
     e.preventDefault();
-    const nick = document.getElementById('chat-nick')?.value.trim() || 'Warrior_500';
+    const nick = document.getElementById('chat-nick')?.value.trim();
     const text = document.getElementById('chat-text')?.value.trim();
-    if (!text) return;
+    if (!nick || !text) return;
+
+    // Save nickname for next time
+    savedChatNick = nick;
+    localStorage.setItem('k500_chat_nick', nick);
+
     chatMessages.push({ nick, text, time: now() });
     if (chatMessages.length > 30) chatMessages.shift();
     localStorage.setItem('k500_chat', JSON.stringify(chatMessages));
@@ -446,6 +460,7 @@ function initChat() {
     document.getElementById('chat-text').value = '';
     audioEngine.playClick();
   });
+
   setInterval(() => {
     chatMessages.push({ nick: BOT_NICKS[Math.floor(Math.random()*BOT_NICKS.length)], text: BOT_QUOTES[Math.floor(Math.random()*BOT_QUOTES.length)], time: now() });
     if (chatMessages.length > 30) chatMessages.shift();
