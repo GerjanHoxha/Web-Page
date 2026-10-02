@@ -433,9 +433,6 @@ function animateCounter(el, target) {
 let chatMessages = [];
 try { chatMessages = JSON.parse(localStorage.getItem('k500_chat')) || []; } catch { chatMessages = []; }
 
-const BOT_NICKS  = ["Ragnar_Ironclad","Shieldmaiden_Helga","Viking_Beast","Skald_Gunnar","Asgard_Warlord"];
-const BOT_QUOTES = ["Gathering speedups for KvK Gate 3!","Who needs dragon shrine title buff?","Kingdom 500 is unstoppable!","Rally on pass in 10 minutes! Join up!","Just upgraded to T5 Infantry!"];
-
 function initChat() {
   const nickInput = document.getElementById('chat-nick');
   if (nickInput && savedChatNick) {
@@ -460,13 +457,6 @@ function initChat() {
     document.getElementById('chat-text').value = '';
     audioEngine.playClick();
   });
-
-  setInterval(() => {
-    chatMessages.push({ nick: BOT_NICKS[Math.floor(Math.random()*BOT_NICKS.length)], text: BOT_QUOTES[Math.floor(Math.random()*BOT_QUOTES.length)], time: now() });
-    if (chatMessages.length > 30) chatMessages.shift();
-    localStorage.setItem('k500_chat', JSON.stringify(chatMessages));
-    renderChatMessages();
-  }, 14000);
 }
 
 function renderChatMessages() {
