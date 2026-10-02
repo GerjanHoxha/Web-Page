@@ -11,16 +11,30 @@ export class AudioEngine {
     this.isPlaying = false;
     this.videoId = 'kKAY7YaBVWM';
     this._initYT();
+    this._setupGlobalAutoplayTrigger();
+  }
+
+  _setupGlobalAutoplayTrigger() {
+    const tryAutoplay = () => {
+      if (this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
+        this.ytPlayer.playVideo();
+        this.isPlaying = true;
+      }
+      document.removeEventListener('click', tryAutoplay);
+      document.removeEventListener('touchstart', tryAutoplay);
+      document.removeEventListener('keydown', tryAutoplay);
+    };
+    document.addEventListener('click', tryAutoplay);
+    document.addEventListener('touchstart', tryAutoplay);
+    document.addEventListener('keydown', tryAutoplay);
   }
 
   _initYT() {
-    // If YT API already loaded just create the player
     if (window.YT && window.YT.Player) {
       this._createPlayer();
       return;
     }
 
-    // Inject YT IFrame API script once
     if (!document.getElementById('yt-api-script')) {
       const tag = document.createElement('script');
       tag.id = 'yt-api-script';
@@ -28,7 +42,6 @@ export class AudioEngine {
       document.head.appendChild(tag);
     }
 
-    // Chain onto any existing onYouTubeIframeAPIReady
     const prev = window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady = () => {
       if (typeof prev === 'function') prev();
@@ -40,7 +53,6 @@ export class AudioEngine {
     const el = document.getElementById('yt-player-iframe');
     if (!el) return;
 
-    // Already initialised — don't create a second player
     if (this.ytPlayer && typeof this.ytPlayer.getPlayerState === 'function') return;
 
     this.ytPlayer = new window.YT.Player('yt-player-iframe', {
@@ -51,37 +63,26 @@ export class AudioEngine {
         playlist: this.videoId,
         controls: 0,
         modestbranding: 1,
-        rel: 0
+        rel: 0,
+        mute: 0
       },
       events: {
         onReady: (e) => {
           e.target.setVolume(75);
-          e.target.playVideo();
-          this.isPlaying = true;
-          // Autoplay is often blocked; re-trigger on first user gesture
-          this._setupAutoplayFallback();
+          try {
+            e.target.playVideo();
+            this.isPlaying = true;
+          } catch (err) {
+            console.log('Autoplay blocked, waiting for user interaction');
+          }
         },
         onStateChange: (e) => {
-          // Loop if ended
           if (e.data === window.YT.PlayerState.ENDED) {
             e.target.playVideo();
           }
         }
       }
     });
-  }
-
-  _setupAutoplayFallback() {
-    const tryPlay = () => {
-      if (this.ytPlayer && typeof this.ytPlayer.playVideo === 'function' && !this.isPlaying) {
-        this.ytPlayer.playVideo();
-        this.isPlaying = true;
-      }
-      document.removeEventListener('click', tryPlay);
-      document.removeEventListener('keydown', tryPlay);
-    };
-    document.addEventListener('click', tryPlay);
-    document.addEventListener('keydown', tryPlay);
   }
 
   toggleSoundtrack(callback) {
