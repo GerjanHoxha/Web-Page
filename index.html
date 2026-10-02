@@ -12,25 +12,17 @@
 </head>
 <body>
 
-  <!-- ============================================================
-       PERSISTENT BACKGROUND LAYERS (never removed from DOM)
-       Music keeps playing because this iframe is NEVER reloaded.
-  ============================================================ -->
   <canvas id="bg-canvas"></canvas>
   <canvas id="ember-canvas"></canvas>
   <canvas id="lightning-canvas"></canvas>
   <div id="dim-overlay"></div>
 
-  <!-- Peyton Parrish - Valhalla Calling (HIDDEN, PERSISTENT, NEVER RELOADS) -->
   <iframe id="yt-player-iframe"
           src="https://www.youtube-nocookie.com/embed/kKAY7YaBVWM?enablejsapi=1&autoplay=1&loop=1&playlist=kKAY7YaBVWM&controls=0"
           allow="autoplay; encrypted-media"
           style="position:fixed; top:-9999px; left:-9999px; width:1px; height:1px; opacity:0; pointer-events:none;">
   </iframe>
 
-  <!-- ============================================================
-       PERSISTENT NAVIGATION (HOME & WHY 500 only)
-  ============================================================ -->
   <nav class="nav" id="top">
     <div class="nav-container">
       <div class="logo" style="cursor:pointer;" id="logo-home">
@@ -45,7 +37,7 @@
         <div class="lang-switch">
           <button id="lang-en" class="lang-btn active" type="button">EN</button>
           <span>|</span>
-      
+          <button id="lang-ru" class="lang-btn" type="button">РУ</button>
         </div>
         <button id="snd-btn" class="btn-icon" type="button" title="Valhalla Calling Soundtrack">
           🎵 <span id="snd-btn-text">Valhalla Calling</span>
@@ -57,14 +49,8 @@
     </div>
   </nav>
 
-  <!-- ============================================================
-       SINGLE CONTENT AREA — JS swaps content here, music stays on
-  ============================================================ -->
   <div id="page-content"></div>
 
-  <!-- ============================================================
-       PERSISTENT FOOTER
-  ============================================================ -->
   <footer class="footer">
     <div class="footer-container">
       <p>Kingdom 500 • One Family, One Kingdom, One Goal. Viking Rise Community Hub.</p>
@@ -74,9 +60,6 @@
     </div>
   </footer>
 
-  <!-- ============================================================
-       PERSISTENT ADMIN MODAL
-  ============================================================ -->
   <div id="admin-modal" class="modal-overlay">
     <div class="modal-card glass-card">
       <button class="modal-close-btn" id="admin-close">&times;</button>
@@ -97,6 +80,7 @@
           <button class="admin-tab-btn" data-tab="cms-officers">👑 8 Officers</button>
           <button class="admin-tab-btn" data-tab="cms-roster">⚔️ Warriors</button>
           <button class="admin-tab-btn" data-tab="cms-duty">📜 Duty Log</button>
+          <button class="admin-tab-btn" data-tab="cms-activity">📣 Activity Feed</button>
         </div>
 
         <div id="cms-stats" class="cms-tab-content active">
@@ -154,6 +138,13 @@
               <tbody id="admin-duty-tbody"></tbody>
             </table>
           </div>
+        </div>
+
+        <div id="cms-activity" class="cms-tab-content">
+          <h3>Edit War Activity Feed</h3>
+          <p style="color:var(--text-muted); font-size:0.8rem; margin-bottom:12px;">Use format: icon|title|text|time. One item per line.</p>
+          <textarea id="activity-feed-editor" placeholder="⚔️|Dragon Shrine Captured|Alliance [xHTx] successfully garrisoned the Central Dragon Shrine.|45 mins ago"></textarea>
+          <button class="btn-gold-sm" id="save-activity-btn" style="margin-top:14px">Save Feed</button>
         </div>
       </div>
     </div>
