@@ -17,7 +17,7 @@ let players = loadPlayers();
 let currentPage = 'home';
 let savedChatNick = localStorage.getItem('k500_chat_nick') || '';
 
-// ─── Boot ───────────────────────────────────────────────────────────
+// ─── Boot ───────���──────���────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   canvasEngine = new CanvasEngine();
   audioEngine  = new AudioEngine();
@@ -104,6 +104,15 @@ function savePlayers() {
   localStorage.setItem('k500_players', JSON.stringify(players));
 }
 
+function loadWarActivity() {
+  try {
+    const raw = localStorage.getItem('k500_activity_feed');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 // ────────────────────────────────────────────────────────────────
 //  PAGE TEMPLATES
 // ────────────────────────────────────────────────────────────────
@@ -168,7 +177,6 @@ function renderHome() {
       </div>
     </section>
 
-    <!-- Live Chat & Activity -->
     <section class="section two-col-section" id="chat">
       <div class="chat-col">
         <div class="section-header align-left"><h2>LIVE KINGDOM CHAT</h2><div class="header-divider"></div></div>
@@ -184,17 +192,12 @@ function renderHome() {
           </form>
         </div>
       </div>
-      <div class="feed-col">
-        <div class="section-header align-left"><h2>KINGDOM WAR ACTIVITY</h2><div class="header-divider"></div></div>
-        <div class="activity-feed glass-card" id="activity-feed"></div>
-      </div>
     </section>
   </main>`;
 }
 
 function afterHome() {
   initChat();
-  initFeed();
 }
 
 // ── WHY 500 ───────────────────────────────────────────────────────────
@@ -212,6 +215,26 @@ function renderWhy() {
         <div class="card glass-card"><div class="card-icon">⚡</div><h3 style="color:var(--gold)">24/7 Global Presence</h3><p class="card-text">Chat, voice, rallies and defense runs around the clock.</p></div>
         <div class="card glass-card"><div class="card-icon">👑</div><h3 style="color:var(--crimson-light)">One Unified Goal</h3><p class="card-text">We plan war campaigns together, share reward intel and hold a single strategic direction.</p></div>
         <div class="card glass-card"><div class="card-icon">📜</div><h3 style="color:var(--ice-glow)">Zero Drama & Fair Loot</h3><p class="card-text">Transparent council decisions, automated KvK rules and consistent support for every member.</p></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="download-strip glass-card">
+        <h3>Download Viking Rise</h3>
+        <div class="store-row">
+          <a class="store-btn play" href="https://play.google.com/store/apps/details?id=com.igg.android.vikingriseglobal&pcampaignid=web_share" target="_blank" rel="noreferrer">
+            <span class="store-logo">▶</span>
+            <span><small>GET IT ON</small><strong>Google Play</strong></span>
+          </a>
+          <a class="store-btn apple" href="https://apps.apple.com/us/app/viking-rise-train-your-dragon/id6443577184" target="_blank" rel="noreferrer">
+            <span class="store-logo"></span>
+            <span><small>Download on the</small><strong>App Store</strong></span>
+          </a>
+        </div>
+        <div class="social-row">
+          <a class="social-btn" href="#" target="_blank" rel="noreferrer">📱 Discord</a>
+          <a class="social-btn" href="#" target="_blank" rel="noreferrer">💬 Telegram</a>
+        </div>
       </div>
     </section>
   </main>`;
@@ -446,7 +469,6 @@ function initChat() {
     const text = document.getElementById('chat-text')?.value.trim();
     if (!nick || !text) return;
 
-    // Save nickname for next time
     savedChatNick = nick;
     localStorage.setItem('k500_chat_nick', nick);
 
@@ -468,16 +490,6 @@ function renderChatMessages() {
       <div class="chat-msg-text">${m.text}</div>
     </div>`).join('');
   el.scrollTop = el.scrollHeight;
-}
-
-function initFeed() {
-  const el = document.getElementById('activity-feed');
-  if (!el) return;
-  el.innerHTML = initialActivityFeed.map(f => `
-    <div class="feed-item">
-      <div class="feed-icon">${f.icon}</div>
-      <div class="feed-content"><p><strong>${f.title}</strong></p><p style="color:var(--text-muted)">${f.text}</p><span class="feed-time">${f.time}</span></div>
-    </div>`).join('');
 }
 
 function now() { return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
