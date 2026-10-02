@@ -22,26 +22,18 @@ export class AdminEngine {
 
   // ── Static bindings (modal chrome, never re-created) ─────────────────────
   _bindStatic() {
-    // Open modal buttons
-    document.getElementById('admin-trigger')
-      ?.addEventListener('click', () => this.openModal());
-    document.getElementById('footer-admin-btn')
-      ?.addEventListener('click', () => this.openModal());
+    document.getElementById('admin-trigger')?.addEventListener('click', () => this.openModal());
+    document.getElementById('footer-admin-btn')?.addEventListener('click', () => this.openModal());
 
-    document.getElementById('admin-close')
-      ?.addEventListener('click', () => this.close());
-    document.getElementById('admin-login-btn')
-      ?.addEventListener('click', () => this._auth());
+    document.getElementById('admin-close')?.addEventListener('click', () => this.close());
+    document.getElementById('admin-login-btn')?.addEventListener('click', () => this._auth());
     this.passIn?.addEventListener('keydown', e => {
       if (e.key === 'Enter') this._auth();
     });
     this.modal?.addEventListener('click', e => {
       if (e.target === this.modal) this.close();
     });
-    // Export CSV is always present in the modal HTML
-    document.getElementById('export-csv-btn')
-      ?.addEventListener('click', () => this._exportCSV());
-    // Admin tab switcher
+    document.getElementById('export-csv-btn')?.addEventListener('click', () => this._exportCSV());
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
       btn.addEventListener('click', e => {
         document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
@@ -50,10 +42,10 @@ export class AdminEngine {
         document.getElementById(e.currentTarget.dataset.tab)?.classList.add('active');
       });
     });
-    // Stats & officer save
     document.getElementById('save-stats-btn')?.addEventListener('click', () => this._saveStats());
     document.getElementById('save-officers-btn')?.addEventListener('click', () => this._saveOfficers());
     document.getElementById('add-player-btn')?.addEventListener('click', () => this._addPlayer());
+    document.getElementById('save-activity-btn')?.addEventListener('click', () => this._saveActivityFeed());
   }
 
   openModal() {
@@ -79,6 +71,7 @@ export class AdminEngine {
     this._loadStats();
     this._renderOfficers();
     this._renderDuty();
+    this._loadActivityFeed();
     const cnt = document.getElementById('cms-player-count');
     if (cnt) cnt.textContent = this.roster.players.length;
   }
@@ -96,7 +89,7 @@ export class AdminEngine {
     }
   }
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
+  // ── Stats ───────────────────────────────────────────────────────────
   _loadStats() {
     const s = JSON.parse(localStorage.getItem('k500_custom_stats') || JSON.stringify(defaultStats));
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
@@ -115,12 +108,11 @@ export class AdminEngine {
       days:      get('edit-stat-days')      || defaultStats.days
     };
     localStorage.setItem('k500_custom_stats', JSON.stringify(stats));
-    // Re-render stats view without reload
     if (window._currentPage === 'stats') window.navigateSPA('stats');
     this._toast('✅ Kingdom Stats saved!');
   }
 
-  // ── Officers ──────────────────────────────────────────────────────────────
+  // ── Officers ──────────────────────────────────────────────────────────
   _renderOfficers() {
     const container = document.getElementById('officers-editor-list');
     if (!container) return;
@@ -156,12 +148,11 @@ export class AdminEngine {
       saved[i].desc    = g(`off-desc-${i}`)  || saved[i].desc;
     }
     localStorage.setItem('k500_officers', JSON.stringify(saved));
-    // Refresh leadership view in-place if currently open
     if (window._currentPage === 'leadership') window.navigateSPA('leadership');
     this._toast('✅ Council Officers updated!');
   }
 
-  // ── Roster ────────────────────────────────────────────────────────────────
+  // ── Roster ──────────────────────────────────────────────────────────
   _addPlayer() {
     const name  = document.getElementById('new-player-name')?.value.trim();
     const ally  = document.getElementById('new-player-ally')?.value.trim() || 'xHTx';
@@ -177,13 +168,43 @@ export class AdminEngine {
     const cnt = document.getElementById('cms-player-count');
     if (cnt) cnt.textContent = this.roster.players.length;
     this._toast(`✅ Warrior ${name} added!`);
-    // Clear inputs
     ['new-player-name','new-player-ally','new-player-power'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
   }
 
-  // ── Duty log ──────────────────────────────────────────────────────────────
+  // ── Activity feed editor ───────────────────────────────────────────────
+  _loadActivityFeed() {
+    const area = document.getElementById('activity-feed-editor');
+    if (!area) return;
+    const items = JSON.parse(localStorage.getItem('k500_activity_feed') || '[]');
+    if (!items.length) {
+      area.value = `🏆|KvK Stage 2 Victorious!|Kingdom 500 secured #1 rank in Kingdom vs Kingdom honor points.|12 mins ago\n⚔️|Dragon Shrine Captured|Alliance [xHTx] successfully garrisoned the Central Dragon Shrine.|45 mins ago\n📜|New Treaty Signed|Council published updated KvK loot distribution rules.|2 hours ago`;
+      return;
+    }
+    area.value = items.map(item => `${item.icon || '⚔️'}|${item.title || ''}|${item.text || ''}|${item.time || 'Just now'}`).join('\n');
+  }
+
+  _saveActivityFeed() {
+    const area = document.getElementById('activity-feed-editor');
+    if (!area) return;
+    const lines = area.value.split('\n').map(line => line.trim()).filter(Boolean);
+    const items = lines.map(line => {
+      const parts = line.split('|');
+      return {
+        icon: (parts[0] || '⚔️').trim(),
+        title: (parts[1] || 'War Activity').trim(),
+        text: (parts[2] || '').trim(),
+        time: (parts[3] || 'Just now').trim()
+      };
+    }).filter(item => item.title || item.text);
+
+    localStorage.setItem('k500_activity_feed', JSON.stringify(items));
+    if (window._currentPage === 'home') window.navigateSPA('home');
+    this._toast('✅ War activity feed updated!');
+  }
+
+  // ── Duty log ──────────────────────────────────────────────────────────
   _renderDuty() {
     const log = JSON.parse(localStorage.getItem('k500_duty_log') || '[]');
     const cnt = document.getElementById('duty-count');
@@ -205,7 +226,7 @@ export class AdminEngine {
       </tr>`).join('');
   }
 
-  // ── CSV Export ────────────────────────────────────────────────────────────
+  // ── CSV Export ─────────────────────────────────────────────────────────
   _exportCSV() {
     const log = JSON.parse(localStorage.getItem('k500_duty_log') || '[]');
     if (!log.length) { alert('No duty entries to export!'); return; }
@@ -218,7 +239,7 @@ export class AdminEngine {
 
   _toast(msg) {
     const t = document.createElement('div');
-    t.style.cssText = 'position:fixed;bottom:80px;right:24px;background:rgba(34,197,94,0.15);border:1px solid #22c55e;color:#4ade80;padding:12px 20px;border-radius:8px;font-size:0.9rem;z-index:9999;backdrop-filter:blur(10px);transition:opacity 0.5s';
+    t.style.cssText = 'position:fixed;bottom:80px;right:24px;background:rgba(34,197,94,0.15);border:1px solid #22c55e;color:#4ade80;padding:12px 20px;border-radius:8px;font-size:0.9rem;z-index:99;';
     t.textContent = msg;
     document.body.appendChild(t);
     setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 3000);
