@@ -20,12 +20,10 @@ let savedChatNick = localStorage.getItem('k500_chat_nick') || '';
 let liveChatChannel = null;
 
 function resetStarterRoster() {
-  if (!localStorage.getItem('k500_roster_reset')) {
-    localStorage.removeItem(PLAYER_STORAGE_KEY);
-    localStorage.setItem('k500_roster_reset', '1');
-  }
+  // Firebase is the single source of truth for persisted site data.
+  // Never delete stored data during startup; roster resets are disabled.
+  return false;
 }
-resetStarterRoster();
 
 // Boot
 
@@ -138,7 +136,7 @@ function renderHome() {
               <stop offset="0%" stop-color="#fff5c0"/><stop offset="50%" stop-color="#e6b84c"/><stop offset="100%" stop-color="#8a5a12"/>
             </linearGradient>
           </defs>
-          <g><rect x="196" y="20" width="8" height="190" rx="4" fill="#5c3818"/><path d="M200 24 C150 4 112 40 128 88 C160 72 186 72 200 84Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="4"/></g>
+          <g><rect x="196" y="20" width="8" height="190" rx="4" fill="#5c3818"/><path d="M200 24 C150 4 112 40 128 88 C160 72 186 72 200 84Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="4"/><path d="M200 84 L235 142 L200 178 L165 142 Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="4"/><path d="M200 24 C250 4 288 40 272 88 C240 72 214 72 200 84Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="4"/></g>
         </svg>
         <div class="hero-plaque"><h1>KINGDOM 500</h1></div>
       </div>
@@ -198,6 +196,10 @@ function renderHome() {
           </form>
         </div>
       </div>
+      <div class="activity-feed-col">
+        <div class="section-header align-left"><h2>WAR ACTIVITY</h2><div class="header-divider"></div></div>
+        <div class="activity-feed glass-card" id="activity-feed" aria-live="polite"></div>
+      </div>
     </section>
   </main>`;
 }
@@ -216,10 +218,10 @@ function renderWhy() {
     </div>
     <section class="section">
       <div class="cards-grid">
-        <div class="card glass-card"><div class="card-icon">🛡️</div><h3 style="color:var(--ice)">One Family First</h3><p class="card-text">Nobody fights alone. Every player is supported by dedicated leaders and experienced KvK veterans. We defend each other without hesitation.</p></div>
-        <div class="card glass-card"><div class="card-icon">⚡</div><h3 style="color:var(--gold)">24/7 Global Presence</h3><p class="card-text">Chat, voice strategy, rallies, and defense runs around the clock across all global time zones (NA, EU, ASIA).</p></div>
-        <div class="card glass-card"><div class="card-icon">👑</div><h3 style="color:var(--crimson-light)">One Unified Goal</h3><p class="card-text">We plan war campaigns together, share rewards fairly based on contribution, and conquer as one unified kingdom.</p></div>
-        <div class="card glass-card"><div class="card-icon">📜</div><h3 style="color:var(--ice-glow)">Zero Drama & Fair Loot</h3><p class="card-text">Transparent kingdom council decisions, automated KvK reward distribution, and strict zero-drama enforcement.</p></div>
+        <div class="card glass-card"><div class="card-icon">🛡️</div><h3 style="color:var(--ice)">One Family First</h3><p class="card-text">Nobody fights alone. Every player is supported by dedicated allies, commanders, and kingdom leadership.</p></div>
+        <div class="card glass-card"><div class="card-icon">⚡</div><h3 style="color:var(--gold)">24/7 Global Presence</h3><p class="card-text">Chat, strategy, rallies, and defense runs happen around the clock across time zones.</p></div>
+        <div class="card glass-card"><div class="card-icon">👑</div><h3 style="color:var(--crimson-light)">One Unified Goal</h3><p class="card-text">We plan war campaigns together, share battlefield intelligence, and push for real victories.</p></div>
+        <div class="card glass-card"><div class="card-icon">📜</div><h3 style="color:var(--ice-glow)">Zero Drama & Fair Loot</h3><p class="card-text">Transparent leadership decisions and disciplined war culture keep the kingdom strong.</p></div>
       </div>
     </section>
 
