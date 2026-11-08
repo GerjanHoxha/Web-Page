@@ -1,101 +1,69 @@
 /**
  * KINGDOM 500 - AUDIO ENGINE
- * Uses the single persistent hidden YouTube iframe already in the DOM.
- * The iframe is NEVER recreated on navigation — music plays non-stop across all views.
- * Video: Peyton Parrish - Valhalla Calling (kKAY7YaBVWM)
+ * Uses the single persistent hidden audio element already in the DOM.
+ * The uploaded soundtrack plays on a loop and starts after the first user interaction.
  */
+
+const SOUNDTRACK_SRC = new URL('../WhatsApp Audio 2026-11-08 at 8.37.39 PM.mpeg', import.meta.url).href;
 
 export class AudioEngine {
   constructor() {
-    this.ytPlayer = null;
+    this.audio = document.getElementById('background-audio') || this._createAudioElement();
+    this.audio.src = SOUNDTRACK_SRC;
+    this.audio.loop = true;
+    this.audio.volume = 0.3;
+    this.audio.preload = 'auto';
+    this.audio.muted = false;
     this.isPlaying = false;
-    this.videoId = 'kKAY7YaBVWM';
-    this._initYT();
-    this._setupGlobalAutoplayTrigger();
+    this.hasStarted = false;
+
+    this._setupFirstInteraction();
   }
 
-  _setupGlobalAutoplayTrigger() {
-    const tryAutoplay = () => {
-      if (this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
-        this.ytPlayer.playVideo();
+  _createAudioElement() {
+    const audio = document.createElement('audio');
+    audio.id = 'background-audio';
+    audio.preload = 'auto';
+    audio.loop = true;
+    audio.playsInline = true;
+    audio.style.display = 'none';
+    document.body.appendChild(audio);
+    return audio;
+  }
+
+  _setupFirstInteraction() {
+    const startPlayback = () => {
+      if (this.hasStarted) return;
+      this.hasStarted = true;
+      document.removeEventListener('pointerdown', startPlayback);
+      document.removeEventListener('keydown', startPlayback);
+      this._play();
+    };
+
+    document.addEventListener('pointerdown', startPlayback, { once: true });
+    document.addEventListener('keydown', startPlayback, { once: true });
+  }
+
+  _play() {
+    this.audio.play()
+      .then(() => {
         this.isPlaying = true;
-      }
-      document.removeEventListener('click', tryAutoplay);
-      document.removeEventListener('touchstart', tryAutoplay);
-      document.removeEventListener('keydown', tryAutoplay);
-    };
-    document.addEventListener('click', tryAutoplay);
-    document.addEventListener('touchstart', tryAutoplay);
-    document.addEventListener('keydown', tryAutoplay);
-  }
-
-  _initYT() {
-    if (window.YT && window.YT.Player) {
-      this._createPlayer();
-      return;
-    }
-
-    if (!document.getElementById('yt-api-script')) {
-      const tag = document.createElement('script');
-      tag.id = 'yt-api-script';
-      tag.src = 'https://www.youtube.com/iframe_api';
-      document.head.appendChild(tag);
-    }
-
-    const prev = window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady = () => {
-      if (typeof prev === 'function') prev();
-      this._createPlayer();
-    };
-  }
-
-  _createPlayer() {
-    const el = document.getElementById('yt-player-iframe');
-    if (!el) return;
-
-    if (this.ytPlayer && typeof this.ytPlayer.getPlayerState === 'function') return;
-
-    this.ytPlayer = new window.YT.Player('yt-player-iframe', {
-      videoId: this.videoId,
-      playerVars: {
-        autoplay: 1,
-        loop: 1,
-        playlist: this.videoId,
-        controls: 0,
-        modestbranding: 1,
-        rel: 0,
-        mute: 0
-      },
-      events: {
-        onReady: (e) => {
-          e.target.setVolume(75);
-          try {
-            e.target.playVideo();
-            this.isPlaying = true;
-          } catch (err) {
-            console.log('Autoplay blocked, waiting for user interaction');
-          }
-        },
-        onStateChange: (e) => {
-          if (e.data === window.YT.PlayerState.ENDED) {
-            e.target.playVideo();
-          }
-        }
-      }
-    });
+      })
+      .catch(() => {
+        this.isPlaying = false;
+      });
   }
 
   toggleSoundtrack(callback) {
-    if (!this.ytPlayer || typeof this.ytPlayer.getPlayerState !== 'function') return;
-    const state = this.ytPlayer.getPlayerState();
-    if (state === window.YT.PlayerState.PLAYING) {
-      this.ytPlayer.pauseVideo();
-      this.isPlaying = false;
+    if (this.audio.paused) {
+      this.hasStarted = true;
+      this._play();
     } else {
-      this.ytPlayer.playVideo();
-      this.isPlaying = true;
+      this.audio.pause();
+      this.isPlaying = false;
     }
-    if (typeof callback === 'function') callback(this.isPlaying);
+
+    if (typeof callback === 'function') callback(!this.audio.paused);
   }
 
   playClick() {

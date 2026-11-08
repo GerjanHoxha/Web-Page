@@ -17,11 +17,7 @@
   <canvas id="lightning-canvas"></canvas>
   <div id="dim-overlay"></div>
 
-  <iframe id="yt-player-iframe"
-          src="https://www.youtube-nocookie.com/embed/kKAY7YaBVWM?enablejsapi=1&autoplay=1&loop=1&playlist=kKAY7YaBVWM&controls=0"
-          allow="autoplay; encrypted-media"
-          style="position:fixed; top:-9999px; left:-9999px; width:1px; height:1px; opacity:0; pointer-events:none;">
-  </iframe>
+  <audio id="background-audio" preload="auto" loop playsinline style="display:none;"></audio>
 
   <nav class="nav" id="top">
     <div class="nav-container">
@@ -39,8 +35,8 @@
           <span>|</span>
           <button id="lang-ru" class="lang-btn" type="button">РУ</button>
         </div>
-        <button id="snd-btn" class="btn-icon" type="button" title="Valhalla Calling Soundtrack">
-          🎵 <span id="snd-btn-text">Valhalla Calling</span>
+        <button id="snd-btn" class="btn-icon" type="button" title="Background soundtrack">
+          🎵 <span id="snd-btn-text">Background Music</span>
         </button>
         <button id="admin-trigger" class="btn-outline-sm" type="button">
           🔒 <span>Admin</span>
