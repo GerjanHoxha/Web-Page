@@ -1,15 +1,13 @@
-/* new styles for the activity feed beside chat */
+@import url('https://raw.githubusercontent.com/GerjanHoxha/Web-Page/master/style.css');
+
+/* Activity feed beside live chat on desktop, stacked on small screens. */
 .two-col-section {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
   gap: 32px;
 }
 
-.activity-feed-col {
-  display: flex;
-  flex-direction: column;
-}
-
+.activity-feed-col { display: flex; flex-direction: column; }
 .activity-feed {
   height: 420px;
   overflow-y: auto;
@@ -18,7 +16,6 @@
   gap: 12px;
   padding: 18px;
 }
-
 .feed-item {
   display: flex;
   gap: 12px;
@@ -28,41 +25,12 @@
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
-
-.feed-item .feed-icon {
-  font-size: 1.3rem;
-  line-height: 1;
-}
-
-.feed-item .feed-content {
-  flex: 1;
-}
-
-.feed-item h4 {
-  margin: 0 0 6px;
-  color: var(--gold-light);
-}
-
-.feed-item p {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.feed-item .feed-time {
-  display: block;
-  margin-top: 8px;
-  color: var(--text-muted);
-  font-size: 0.72rem;
-}
-
+.feed-item .feed-icon { font-size: 1.3rem; line-height: 1; }
+.feed-item .feed-content { flex: 1; }
+.feed-item h4 { margin: 0 0 6px; color: var(--gold-light); }
+.feed-item p { margin: 0; color: var(--text-muted); font-size: 0.85rem; }
+.feed-item .feed-time { display: block; margin-top: 8px; color: var(--text-muted); font-size: 0.72rem; }
 @media (max-width: 900px) {
-  .two-col-section {
-    grid-template-columns: 1fr;
-  }
-
-  .chat-box, .activity-feed {
-    min-height: 300px;
-    height: auto;
-  }
+  .two-col-section { grid-template-columns: 1fr; }
+  .chat-box, .activity-feed { min-height: 300px; height: auto; }
 }
