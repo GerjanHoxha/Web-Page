@@ -9,23 +9,32 @@ import {
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js';
 import { firebaseConfig } from './firebase-config.js';
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const siteDataRef = ref(db, 'siteData');
-const chatRef = query(ref(db, 'chat/messages'), limitToLast(100));
+let app = null;
+let db = null;
+let siteDataRef = null;
+let chatRef = null;
+try {
+  app = initializeApp(firebaseConfig);
+  db = getDatabase(app);
+  siteDataRef = ref(db, 'siteData');
+  chatRef = query(ref(db, 'chat/messages'), limitToLast(100));
+} catch (error) {
+  console.error('[Kingdom 500 Firebase] Initialization failed; continuing without Firebase.', error);
+}
+
 const originalSetItem = Storage.prototype.setItem;
 const originalRemoveItem = Storage.prototype.removeItem;
 let applyingRemote = false;
 let seeded = false;
 let chatMessages = [];
 let currentChatForm = null;
+let chatUnsubscribe = null;
 
 function parseStored(value) {
   try { return JSON.parse(value); } catch { return value; }
 }
 
 function cleanValue(key, value) {
-  // Eliminations are intentionally no longer part of the kingdom stats UI/data.
   if (key === 'k500_custom_stats' && value && typeof value === 'object') {
     const { kills, ...stats } = value;
     return stats;
@@ -44,12 +53,6 @@ function cleanValue(key, value) {
   return value;
 }
 
-function saveLocal(key, value) {
-  applyingRemote = true;
-  try { originalSetItem.call(localStorage, key, JSON.stringify(value)); }
-  finally { applyingRemote = false; }
-}
-
 function showError(message) {
   console.error('[Kingdom 500 Firebase]', message);
   const status = document.getElementById('roll-status-msg');
@@ -60,57 +63,59 @@ function showError(message) {
 }
 
 function writeSiteValue(key, rawValue) {
-  const value = cleanValue(key, parseStored(rawValue));
-  set(ref(db, `siteData/${key}`), value).catch(error => showError(error.message));
+  if (!db) return;
+  set(ref(db, `siteData/${key}`), cleanValue(key, parseStored(rawValue)))
+    .catch(error => showError(error.message));
 }
 
 Storage.prototype.setItem = function (key, value) {
   originalSetItem.call(this, key, value);
-  if (this === localStorage && !applyingRemote && String(key).startsWith('k500_')) {
+  if (this === localStorage && !applyingRemote && db && String(key).startsWith('k500_')) {
     writeSiteValue(String(key), String(value));
   }
 };
 
 Storage.prototype.removeItem = function (key) {
   originalRemoveItem.call(this, key);
-  if (this === localStorage && !applyingRemote && String(key).startsWith('k500_')) {
+  if (this === localStorage && !applyingRemote && db && String(key).startsWith('k500_')) {
     set(ref(db, `siteData/${key}`), null).catch(error => showError(error.message));
   }
 };
 
-onValue(siteDataRef, snapshot => {
-  if (!snapshot.exists()) {
-    if (!seeded) {
-      seeded = true;
-      const existing = {};
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith('k500_')) existing[key] = cleanValue(key, parseStored(localStorage.getItem(key)));
+if (db) {
+  onValue(siteDataRef, snapshot => {
+    if (!snapshot.exists()) {
+      if (!seeded) {
+        seeded = true;
+        const existing = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key?.startsWith('k500_')) existing[key] = cleanValue(key, parseStored(localStorage.getItem(key)));
+        }
+        if (Object.keys(existing).length) {
+          runTransaction(siteDataRef, current => current || existing).catch(error => showError(error.message));
+        }
       }
-      if (Object.keys(existing).length) {
-        runTransaction(siteDataRef, current => current || existing).catch(error => showError(error.message));
-      }
+      return;
     }
-    return;
-  }
 
-  const remote = snapshot.val() || {};
-  applyingRemote = true;
-  try {
-    for (const [key, value] of Object.entries(remote)) {
-      if (!key.startsWith('k500_')) continue;
-      originalSetItem.call(localStorage, key, JSON.stringify(cleanValue(key, value)));
-    }
-    // Remove locally cached CMS values deleted remotely.
-    const remoteKeys = new Set(Object.keys(remote));
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i);
-      if (key?.startsWith('k500_') && !remoteKeys.has(key)) originalRemoveItem.call(localStorage, key);
-    }
-  } finally { applyingRemote = false; }
-  window.dispatchEvent(new CustomEvent('firebase-data-updated', { detail: { keys: Object.keys(remote) } }));
-  refreshPageData();
-}, error => showError(error.message));
+    const remote = snapshot.val() || {};
+    applyingRemote = true;
+    try {
+      for (const [key, value] of Object.entries(remote)) {
+        if (!key.startsWith('k500_')) continue;
+        originalSetItem.call(localStorage, key, JSON.stringify(cleanValue(key, value)));
+      }
+      const remoteKeys = new Set(Object.keys(remote));
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key?.startsWith('k500_') && !remoteKeys.has(key)) originalRemoveItem.call(localStorage, key);
+      }
+    } finally { applyingRemote = false; }
+    window.dispatchEvent(new CustomEvent('firebase-data-updated', { detail: { keys: Object.keys(remote) } }));
+    refreshPageData();
+  }, error => showError(error.message));
+}
 
 function formatMight(value) {
   const number = Number(value) || 0;
@@ -126,7 +131,7 @@ function refreshRosterTable() {
   let players = [];
   try { players = JSON.parse(localStorage.getItem('k500_players') || '[]'); } catch {}
   const search = (document.getElementById('roster-search')?.value || '').trim().toLowerCase();
-  const shown = players.filter(player => !search || player.name.toLowerCase().includes(search));
+  const shown = players.filter(player => !search || String(player.name || '').toLowerCase().includes(search));
   body.innerHTML = shown.map((player, index) => `<tr>
     <td>${index + 1}</td><td>${escapeHtml(player.name)}</td>
     <td>${formatMight(player.power)}</td><td>${escapeHtml(player.rank || 'R1')}</td>
@@ -217,8 +222,7 @@ function installRosterApplicationForm() {
 }
 
 function installAdminEnhancements() {
-  const kills = document.getElementById('edit-stat-kills')?.closest('.form-group');
-  kills?.remove();
+  document.getElementById('edit-stat-kills')?.closest('.form-group')?.remove();
   const adminRoster = document.getElementById('cms-roster');
   if (adminRoster) {
     document.getElementById('new-player-kingdom')?.closest('input')?.remove();
@@ -258,8 +262,7 @@ function installMigrationHandler() {
   if (!form || form.dataset.firebaseMigrationBound) return;
   form.dataset.firebaseMigrationBound = 'true';
   document.getElementById('reg-code')?.closest('.form-group')?.remove();
-  const code = document.getElementById('reg-code');
-  if (code) code.removeAttribute('required');
+  document.getElementById('reg-code')?.removeAttribute('required');
   form.addEventListener('submit', event => {
     event.preventDefault(); event.stopImmediatePropagation();
     const name = document.getElementById('reg-name')?.value.trim();
@@ -267,6 +270,10 @@ function installMigrationHandler() {
     const msg = document.getElementById('roll-status-msg');
     if (!name || !kingdom) {
       if (msg) { msg.style.display = 'block'; msg.textContent = 'Please enter your player name and current kingdom.'; }
+      return;
+    }
+    if (!db) {
+      if (msg) { msg.style.display = 'block'; msg.textContent = 'Firebase is unavailable. Please try again later.'; }
       return;
     }
     const application = {
@@ -310,19 +317,32 @@ function installChat() {
       const nick = document.getElementById('chat-nick')?.value.trim() || 'Warrior_500';
       const text = document.getElementById('chat-text')?.value.trim();
       if (!text) return;
+      if (!db) { showError('Firebase is unavailable.'); return; }
       const message = { nick: nick.slice(0, 32), text: text.slice(0, 500), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), sentAt: Date.now() };
       push(ref(db, 'chat/messages'), message).catch(error => showError(error.message));
       const input = document.getElementById('chat-text'); if (input) input.value = '';
     }, true);
+    // Subscribe per rendered chat form. Firebase sends an initial snapshot, so
+    // revisiting the home view renders its current messages without observer-driven rendering.
+    if (db) {
+      chatUnsubscribe?.();
+      chatUnsubscribe = onValue(chatRef, snapshot => {
+        const value = snapshot.val() || {};
+        chatMessages = Object.values(value).sort((a, b) => (a.sentAt || 0) - (b.sentAt || 0));
+        renderChat();
+      }, error => showError(error.message));
+    }
+  } else if (!form && currentChatForm) {
+    currentChatForm = null;
+    chatUnsubscribe?.();
+    chatUnsubscribe = null;
   }
-  renderChat();
 }
 
-onValue(chatRef, snapshot => {
-  const value = snapshot.val() || {};
-  chatMessages = Object.values(value).sort((a, b) => (a.sentAt || 0) - (b.sentAt || 0));
-  renderChat();
-}, error => showError(error.message));
+if (db) {
+  // Chat rendering is driven only by Firebase snapshots, never by DOM observation.
+  // installChat subscribes when a chat form enters the SPA and unsubscribes when it leaves.
+}
 
 function enhancePage() {
   installAdminEnhancements();
@@ -332,12 +352,18 @@ function enhancePage() {
   refreshPageData();
 }
 
-const observer = new MutationObserver(enhancePage);
-observer.observe(document.documentElement, { childList: true, subtree: true });
+const pageContent = document.getElementById('page-content');
+if (pageContent) {
+  const observer = new MutationObserver(records => {
+    // Ignore chat subtree mutations, including those produced by renderChat().
+    const pageChanges = records.some(record => !record.target.closest?.('#chat-messages'));
+    if (pageChanges) enhancePage();
+  });
+  observer.observe(pageContent, { childList: true, subtree: true });
+}
 document.addEventListener('DOMContentLoaded', enhancePage);
 window.addEventListener('firebase-data-updated', refreshPageData);
 
-// Keep the legacy navigation entry point but make the removed Leaders view inaccessible.
 const navPatchTimer = setInterval(() => {
   if (typeof window.navigateSPA !== 'function') return;
   const originalNavigate = window.navigateSPA;
