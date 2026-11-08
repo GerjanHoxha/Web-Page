@@ -1,185 +1,131 @@
 /**
- * Firebase Realtime Database integration for the Kingdom 500 static site.
- * Mirrors legacy k500_* storage keys to Firebase so all existing admin editors
- * persist and sync without tying persistence to a particular page/component.
+ * Firebase Realtime Database integration.
+ * Firebase is authoritative; localStorage is not mirrored to or from the database.
  */
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import {
-  getDatabase, ref, onValue, set, push, query, limitToLast, runTransaction
+  getDatabase, ref, onValue, set, push, query, limitToLast
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js';
+import { getAuth, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 import { firebaseConfig } from './firebase-config.js';
 
-let app = null;
-let db = null;
-let siteDataRef = null;
-let chatRef = null;
-try {
-  app = initializeApp(firebaseConfig);
-  db = getDatabase(app);
-  siteDataRef = ref(db, 'siteData');
-  chatRef = query(ref(db, 'chat/messages'), limitToLast(100));
-} catch (error) {
-  console.error('[Kingdom 500 Firebase] Initialization failed; continuing without Firebase.', error);
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+const state = {
+  councilOfficers: null,
+  warriors: null,
+  dutyLog: null,
+  activityFeed: null,
+  stats: null,
+  chatMessages: [],
+  migrationApplications: null
+};
+const listeners = new Map();
+const chatRef = query(ref(db, 'chat/messages'), limitToLast(100));
+
+function dispatchDataUpdate(key) {
+  window.dispatchEvent(new CustomEvent('firebase-data-updated', { detail: { keys: [key] } }));
 }
 
-const originalSetItem = Storage.prototype.setItem;
-const originalRemoveItem = Storage.prototype.removeItem;
-let applyingRemote = false;
-let seeded = false;
-let chatMessages = [];
-let currentChatForm = null;
-let chatUnsubscribe = null;
-
-function parseStored(value) {
-  try { return JSON.parse(value); } catch { return value; }
-}
-
-function cleanValue(key, value) {
-  if (key === 'k500_custom_stats' && value && typeof value === 'object') {
-    const { kills, ...stats } = value;
-    return stats;
-  }
-  if (key === 'k500_players' && Array.isArray(value)) {
-    return value.map(player => ({
-      name: String(player.name || player.playerName || '').slice(0, 40),
-      power: Number(player.power ?? player.might) || 0,
-      rank: ['R5', 'R4', 'R3', 'R2', 'R1'].includes(player.rank || player.status) ? (player.rank || player.status) : 'R1',
-      activeForKvK: (player.activeForKvK ?? player.active ?? 'No') === 'Yes' ? 'Yes' : 'No',
-      ...(player.currentKingdom || player.kingdom ? { currentKingdom: String(player.currentKingdom || player.kingdom).slice(0, 50) } : {}),
-      ...(player.id ? { id: String(player.id).slice(0, 32) } : {}),
-      ...(player.registeredAt ? { registeredAt: player.registeredAt } : {})
-    })).filter(player => player.name);
-  }
-  return value;
-}
-
-function showError(message) {
-  console.error('[Kingdom 500 Firebase]', message);
-  const status = document.getElementById('roll-status-msg');
+function reportError(error, statusId) {
+  console.error('[Kingdom 500 Firebase]', error);
+  const status = document.getElementById(statusId) || document.getElementById('admin-auth-err') || document.getElementById('roll-status-msg');
   if (status) {
     status.style.display = 'block';
-    status.textContent = `Firebase could not save this change: ${message}`;
+    status.textContent = `Firebase error: ${error?.message || error}`;
   }
 }
 
-function writeSiteValue(key, rawValue) {
-  if (!db) return;
-  set(ref(db, `siteData/${key}`), cleanValue(key, parseStored(rawValue)))
-    .catch(error => showError(error.message));
-}
-
-Storage.prototype.setItem = function (key, value) {
-  originalSetItem.call(this, key, value);
-  if (this === localStorage && !applyingRemote && db && String(key).startsWith('k500_')) {
-    writeSiteValue(String(key), String(value));
-  }
-};
-
-Storage.prototype.removeItem = function (key) {
-  originalRemoveItem.call(this, key);
-  if (this === localStorage && !applyingRemote && db && String(key).startsWith('k500_')) {
-    set(ref(db, `siteData/${key}`), null).catch(error => showError(error.message));
-  }
-};
-
-if (db) {
-  onValue(siteDataRef, snapshot => {
-    if (!snapshot.exists()) {
-      if (!seeded) {
-        seeded = true;
-        const existing = {};
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key?.startsWith('k500_')) existing[key] = cleanValue(key, parseStored(localStorage.getItem(key)));
-        }
-        if (Object.keys(existing).length) {
-          runTransaction(siteDataRef, current => current || existing).catch(error => showError(error.message));
-        }
-      }
-      return;
+function subscribe(path, key, normalize = value => value) {
+  return onValue(ref(db, path), snapshot => {
+    state[key] = snapshot.exists() ? normalize(snapshot.val()) : null;
+    if (key === 'chatMessages') {
+      state.chatMessages = Object.values(snapshot.val() || {}).sort((a, b) => (a.sentAt || 0) - (b.sentAt || 0));
     }
-
-    const remote = snapshot.val() || {};
-    applyingRemote = true;
-    try {
-      for (const [key, value] of Object.entries(remote)) {
-        if (!key.startsWith('k500_')) continue;
-        originalSetItem.call(localStorage, key, JSON.stringify(cleanValue(key, value)));
-      }
-      const remoteKeys = new Set(Object.keys(remote));
-      for (let i = localStorage.length - 1; i >= 0; i--) {
-        const key = localStorage.key(i);
-        if (key?.startsWith('k500_') && !remoteKeys.has(key)) originalRemoveItem.call(localStorage, key);
-      }
-    } finally { applyingRemote = false; }
-    window.dispatchEvent(new CustomEvent('firebase-data-updated', { detail: { keys: Object.keys(remote) } }));
-    refreshPageData();
-  }, error => showError(error.message));
+    dispatchDataUpdate(key);
+  }, error => reportError(error));
 }
 
-function formatMight(value) {
-  const number = Number(value) || 0;
-  if (number >= 1e9) return `${(number / 1e9).toFixed(2)}B`;
-  if (number >= 1e6) return `${(number / 1e6).toFixed(1)}M`;
-  if (number >= 1e3) return `${Math.round(number / 1e3)}K`;
-  return number.toLocaleString();
+// Keep these listeners scoped to the individual public sections; never subscribe
+// to the parent siteData node, which would require broad read permissions.
+listeners.set('councilOfficers', subscribe('siteData/councilOfficers', 'councilOfficers'));
+listeners.set('warriors', subscribe('siteData/warriors', 'warriors', value => Array.isArray(value) ? value : Object.values(value || {})));
+listeners.set('dutyLog', subscribe('siteData/dutyLog', 'dutyLog', value => Array.isArray(value) ? value : Object.values(value || {})));
+listeners.set('activityFeed', subscribe('siteData/activityFeed', 'activityFeed', value => Array.isArray(value) ? value : Object.values(value || {})));
+listeners.set('stats', subscribe('siteData/k500_custom_stats', 'stats'));
+listeners.set('migrationApplications', subscribe('migrationApplications', 'migrationApplications', value => value || {}));
+listeners.set('chatMessages', onValue(chatRef, snapshot => {
+  state.chatMessages = Object.values(snapshot.val() || {}).sort((a, b) => (a.sentAt || 0) - (b.sentAt || 0));
+  dispatchDataUpdate('chatMessages');
+}, error => reportError(error)));
+
+async function write(path, value, statusId) {
+  if (value === null || value === undefined || value === '') {
+    throw new Error('Empty values are not saved. Use the explicit delete operation to remove an item.');
+  }
+  await set(ref(db, path), value);
+}
+
+async function remove(path) {
+  await set(ref(db, path), null);
+}
+
+async function append(path, value) {
+  const itemRef = push(ref(db, path));
+  await set(itemRef, value);
+  return itemRef.key;
+}
+
+window.firebaseData = {
+  state,
+  auth,
+  write,
+  remove,
+  append,
+  signIn: (email, password) => signInWithEmailAndPassword(auth, email, password),
+  signOut: () => signOut(auth),
+  reportError,
+  onError: (error, statusId) => reportError(error, statusId)
+};
+
+let currentChatForm = null;
+function installChat() {
+  const form = document.getElementById('chat-form');
+  if (!form || form === currentChatForm) return;
+  currentChatForm = form;
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const nick = document.getElementById('chat-nick')?.value.trim() || 'Warrior_500';
+    const text = document.getElementById('chat-text')?.value.trim();
+    if (!text) return;
+    try {
+      await append('chat/messages', {
+        nick: nick.slice(0, 32), text: text.slice(0, 500),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), sentAt: Date.now()
+      });
+      document.getElementById('chat-text').value = '';
+    } catch (error) {
+      reportError(error, 'chat-status-msg');
+    }
+  }, true);
 }
 
 function refreshRosterTable() {
   const body = document.getElementById('roster-tbody');
   if (!body) return;
-  let players = [];
-  try { players = JSON.parse(localStorage.getItem('k500_players') || '[]'); } catch {}
+  const warriors = Array.isArray(state.warriors) ? state.warriors : [];
   const search = (document.getElementById('roster-search')?.value || '').trim().toLowerCase();
-  const shown = players.filter(player => !search || String(player.name || '').toLowerCase().includes(search));
+  const shown = warriors.filter(player => !search || String(player.name || '').toLowerCase().includes(search));
   body.innerHTML = shown.map((player, index) => `<tr>
     <td>${index + 1}</td><td>${escapeHtml(player.name)}</td>
-    <td>${formatMight(player.power)}</td><td>${escapeHtml(player.rank || 'R1')}</td>
+    <td>${escapeHtml(String(player.might ?? player.power ?? ''))}</td><td>${escapeHtml(player.rank || 'R1')}</td>
     <td>${player.activeForKvK === 'Yes' ? 'Yes' : 'No'}</td>
   </tr>`).join('') || '<tr><td colspan="5">No warriors have registered yet.</td></tr>';
 }
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-}
-
-function refreshStats() {
-  let stats = {};
-  try { stats = JSON.parse(localStorage.getItem('k500_custom_stats') || '{}'); } catch {}
-  for (const [id, value] of [['stat-power', stats.power], ['stat-alliances', stats.alliances], ['stat-days', stats.days]]) {
-    const element = document.getElementById(id);
-    if (element) {
-      const formatted = formatMight(value);
-      const target = String(Number(value) || 0);
-      if (element.dataset.target !== target) element.dataset.target = target;
-      if (element.textContent !== formatted) element.textContent = formatted;
-    }
-  }
-  document.getElementById('stat-kills')?.closest('.stat-card')?.remove();
-}
-
-function refreshPageData() {
-  refreshStats();
-  refreshRosterTable();
-}
-
-function addSelect(parent, id, label, options) {
-  if (document.getElementById(id)) return;
-  const group = document.createElement('div');
-  group.className = 'form-group';
-  const title = document.createElement('label');
-  title.htmlFor = id;
-  title.textContent = label;
-  const select = document.createElement('select');
-  select.id = id;
-  for (const value of options) {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = value;
-    select.append(option);
-  }
-  group.append(title, select);
-  parent.append(group);
 }
 
 function installRosterApplicationForm() {
@@ -193,180 +139,74 @@ function installRosterApplicationForm() {
   card.innerHTML = `<h2 style="margin-bottom:14px;color:var(--gold-light)">Join the Warrior Roster</h2>
     <form id="public-roster-form">
       <div class="form-group"><label for="public-player-name">Player Name *</label><input id="public-player-name" required maxlength="40"></div>
-      <div class="form-group"><label for="public-player-might">Might *</label><input id="public-player-might" type="number" min="0" required></div>
+      <div class="form-group"><label for="public-player-might">Might *</label><input id="public-player-might" type="text" required maxlength="40"></div>
       <div class="form-row"><div class="form-group"><label for="public-player-rank">Rank *</label><select id="public-player-rank" required><option>R5</option><option>R4</option><option>R3</option><option>R2</option><option>R1</option></select></div>
       <div class="form-group"><label for="public-player-kvk">Active for KvK *</label><select id="public-player-kvk" required><option>Yes</option><option>No</option></select></div></div>
       <div class="form-group"><label for="public-roster-password">Submission password *</label><input id="public-roster-password" type="password" required autocomplete="current-password"></div>
-      <button class="btn-primary-block" type="submit">Submit Roster Entry</button>
-      <p id="public-roster-status" class="status-msg" style="display:none"></p>
+      <button class="btn-primary-block" type="submit">Submit Roster Entry</button><p id="public-roster-status" class="status-msg" style="display:none"></p>
     </form>`;
   section.prepend(card);
-  document.getElementById('public-roster-form').addEventListener('submit', event => {
+  card.querySelector('form').addEventListener('submit', async event => {
     event.preventDefault();
-    event.stopImmediatePropagation();
-    const form = event.currentTarget;
     const status = document.getElementById('public-roster-status');
+    const show = message => { status.style.display = 'block'; status.textContent = message; };
     if (document.getElementById('public-roster-password').value !== 'newarea500') {
-      status.style.display = 'block'; status.textContent = 'Incorrect submission password.'; return;
+      show('Incorrect submission password.'); return;
     }
     const player = {
       name: document.getElementById('public-player-name').value.trim(),
-      power: Number(document.getElementById('public-player-might').value),
+      might: document.getElementById('public-player-might').value.trim(),
       rank: document.getElementById('public-player-rank').value,
       activeForKvK: document.getElementById('public-player-kvk').value,
       registeredAt: new Date().toISOString()
     };
-    if (!player.name || !Number.isFinite(player.power) || player.power < 0) return;
-    let roster = [];
-    try { roster = JSON.parse(localStorage.getItem('k500_players') || '[]'); } catch {}
-    roster.unshift(player);
-    localStorage.setItem('k500_players', JSON.stringify(roster));
-    status.style.display = 'block'; status.textContent = 'Roster entry saved.';
-    form.reset(); refreshRosterTable();
-  }, true);
-}
-
-function installAdminEnhancements() {
-  document.getElementById('edit-stat-kills')?.closest('.form-group')?.remove();
-  const adminRoster = document.getElementById('cms-roster');
-  if (adminRoster) {
-    document.getElementById('new-player-kingdom')?.closest('input')?.remove();
-    const row = adminRoster.querySelector('.form-row');
-    if (row && !document.getElementById('new-player-rank')) {
-      addSelect(row, 'new-player-rank', 'Rank', ['R5', 'R4', 'R3', 'R2', 'R1']);
-      addSelect(row, 'new-player-kvk', 'Active for KvK', ['Yes', 'No']);
-    }
-    const addButton = document.getElementById('add-player-btn');
-    if (addButton && !addButton.dataset.firebaseBound) {
-      addButton.dataset.firebaseBound = 'true';
-      addButton.addEventListener('click', event => {
-        event.preventDefault(); event.stopImmediatePropagation();
-        const name = document.getElementById('new-player-name')?.value.trim();
-        const power = Number(document.getElementById('new-player-power')?.value);
-        if (!name || !Number.isFinite(power) || power < 0) return;
-        let players = [];
-        try { players = JSON.parse(localStorage.getItem('k500_players') || '[]'); } catch {}
-        players.unshift({ name, power, rank: document.getElementById('new-player-rank')?.value || 'R1', activeForKvK: document.getElementById('new-player-kvk')?.value || 'No', registeredAt: new Date().toISOString() });
-        localStorage.setItem('k500_players', JSON.stringify(players));
-        document.getElementById('new-player-name').value = '';
-        document.getElementById('new-player-power').value = '';
-        const count = document.getElementById('cms-player-count');
-        if (count) count.textContent = players.length;
-        refreshRosterTable();
-      }, true);
-    }
-  }
-  document.querySelectorAll('.portal-card').forEach(card => {
-    if (card.getAttribute('onclick')?.includes("'leadership'")) card.remove();
+    if (!player.name || !player.might) { show('Enter a player name and might.'); return; }
+    try {
+      const players = Array.isArray(state.warriors) ? [...state.warriors] : [];
+      players.unshift(player);
+      await write('siteData/warriors', players);
+      show('Roster entry saved.'); event.currentTarget.reset();
+    } catch (error) { show(`Could not save roster entry: ${error.message}`); }
   });
-  document.querySelectorAll('[data-page="leadership"]').forEach(link => link.remove());
 }
 
 function installMigrationHandler() {
   const form = document.getElementById('roll-form');
   if (!form || form.dataset.firebaseMigrationBound) return;
   form.dataset.firebaseMigrationBound = 'true';
-  document.getElementById('reg-code')?.closest('.form-group')?.remove();
-  document.getElementById('reg-code')?.removeAttribute('required');
-  form.addEventListener('submit', event => {
+  form.addEventListener('submit', async event => {
     event.preventDefault(); event.stopImmediatePropagation();
     const name = document.getElementById('reg-name')?.value.trim();
     const kingdom = document.getElementById('reg-kingdom')?.value.trim();
-    const msg = document.getElementById('roll-status-msg');
-    if (!name || !kingdom) {
-      if (msg) { msg.style.display = 'block'; msg.textContent = 'Please enter your player name and current kingdom.'; }
-      return;
-    }
-    if (!db) {
-      if (msg) { msg.style.display = 'block'; msg.textContent = 'Firebase is unavailable. Please try again later.'; }
-      return;
-    }
+    const status = document.getElementById('roll-status-msg');
+    const show = message => { if (status) { status.style.display = 'block'; status.textContent = message; } };
+    if (!name || !kingdom) { show('Please enter your player name and current kingdom.'); return; }
     const application = {
-      name, playerId: document.getElementById('reg-id')?.value.trim() || '',
-      currentKingdom: kingdom, might: document.getElementById('reg-might')?.value.trim() || '',
+      name, playerId: document.getElementById('reg-id')?.value.trim() || '', currentKingdom: kingdom,
+      might: document.getElementById('reg-might')?.value.trim() || '',
       notes: document.getElementById('reg-notes')?.value.trim() || '', submittedAt: new Date().toISOString()
     };
-    const appRef = push(ref(db, 'migrationApplications'));
-    set(appRef, application).then(() => {
+    try {
+      await append('migrationApplications', application);
       const duty = { name, id: application.playerId, currentKingdom: kingdom, power: application.might, notes: application.notes, registeredAt: new Date().toLocaleString() };
-      let log = [];
-      try { log = JSON.parse(localStorage.getItem('k500_duty_log') || '[]'); } catch {}
-      log.unshift(duty); localStorage.setItem('k500_duty_log', JSON.stringify(log));
-      if (msg) { msg.style.display = 'block'; msg.textContent = 'Migration application submitted successfully.'; }
-      form.reset();
-    }).catch(error => { if (msg) { msg.style.display = 'block'; msg.textContent = `Could not submit application: ${error.message}`; } });
+      const log = Array.isArray(state.dutyLog) ? [...state.dutyLog] : [];
+      log.unshift(duty);
+      await write('siteData/dutyLog', log);
+      show('Migration application submitted successfully.'); form.reset();
+    } catch (error) { show(`Could not submit application: ${error.message}`); }
   }, true);
 }
 
-function renderChat() {
-  const container = document.getElementById('chat-messages');
-  if (!container) return;
-  container.replaceChildren();
-  for (const message of chatMessages) {
-    const item = document.createElement('div'); item.className = 'chat-msg';
-    const header = document.createElement('div'); header.className = 'chat-msg-header';
-    const nick = document.createElement('span'); nick.className = 'chat-msg-user'; nick.textContent = message.nick || 'Warrior';
-    const time = document.createElement('span'); time.textContent = message.time || '';
-    const text = document.createElement('div'); text.className = 'chat-msg-text'; text.textContent = message.text || '';
-    header.append(nick, time); item.append(header, text); container.append(item);
-  }
-  container.scrollTop = container.scrollHeight;
-}
-
-function installChat() {
-  const form = document.getElementById('chat-form');
-  if (form && form !== currentChatForm) {
-    currentChatForm = form;
-    form.addEventListener('submit', event => {
-      event.preventDefault(); event.stopImmediatePropagation();
-      const nick = document.getElementById('chat-nick')?.value.trim() || 'Warrior_500';
-      const text = document.getElementById('chat-text')?.value.trim();
-      if (!text) return;
-      if (!db) { showError('Firebase is unavailable.'); return; }
-      const message = { nick: nick.slice(0, 32), text: text.slice(0, 500), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), sentAt: Date.now() };
-      push(ref(db, 'chat/messages'), message).catch(error => showError(error.message));
-      const input = document.getElementById('chat-text'); if (input) input.value = '';
-    }, true);
-    if (db) {
-      chatUnsubscribe?.();
-      chatUnsubscribe = onValue(chatRef, snapshot => {
-        const value = snapshot.val() || {};
-        chatMessages = Object.values(value).sort((a, b) => (a.sentAt || 0) - (b.sentAt || 0));
-        renderChat();
-      }, error => showError(error.message));
-    } else {
-      renderChat();
-    }
-  } else if (!form && currentChatForm) {
-    currentChatForm = null;
-    chatUnsubscribe?.();
-    chatUnsubscribe = null;
-  }
-}
-
 function enhancePage() {
-  installAdminEnhancements();
+  installChat();
   installRosterApplicationForm();
   installMigrationHandler();
-  installChat();
-  refreshPageData();
+  refreshRosterTable();
 }
 
-// Observe only direct route replacements in the SPA content root. Enhancements
-// and data refreshes mutate descendants of this root, so those writes cannot
-// retrigger this observer and form a self-sustaining navigation loop.
 const pageContent = document.getElementById('page-content');
-if (pageContent) {
-  const observer = new MutationObserver(() => enhancePage());
-  observer.observe(pageContent, { childList: true });
-}
+if (pageContent) new MutationObserver(enhancePage).observe(pageContent, { childList: true });
 document.addEventListener('DOMContentLoaded', enhancePage);
-window.addEventListener('firebase-data-updated', refreshPageData);
-
-const navPatchTimer = setInterval(() => {
-  if (typeof window.navigateSPA !== 'function') return;
-  const originalNavigate = window.navigateSPA;
-  window.navigateSPA = page => originalNavigate(page === 'leadership' ? 'home' : page);
-  clearInterval(navPatchTimer);
-}, 50);
-setTimeout(() => clearInterval(navPatchTimer), 10000);
+window.addEventListener('firebase-data-updated', event => {
+  if (event.detail?.keys?.some(key => ['warriors', 'dutyLog', 'activityFeed', 'councilOfficers'].includes(key))) enhancePage();
+});
