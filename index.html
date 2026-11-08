@@ -25,6 +25,7 @@
       </div>
       <div class="nav-links">
         <a href="#" class="nav-link active" data-page="home">HOME</a>
+        <a href="#" class="nav-link" data-page="leadership">COUNCIL</a>
         <a href="#" class="nav-link" data-page="why">WHY 500</a>
       </div>
       <div class="nav-actions">
@@ -124,11 +125,7 @@
 
   <script>
     const siteAudio = document.getElementById('site-audio');
-
-    // Try unmuted autoplay on page load. Browsers may block it until a user gesture.
     siteAudio.play().catch(() => {});
-
-    // If autoplay is blocked, try to start playback on the first site button/link click.
     document.addEventListener('click', event => {
       if (event.target.closest('button, a')) {
         siteAudio.play().catch(() => {});
