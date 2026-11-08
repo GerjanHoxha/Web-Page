@@ -40,6 +40,10 @@
   <footer class="footer">
     <div class="footer-container">
       <p>Kingdom 500 • One Family, One Kingdom, One Goal. Viking Rise Community Hub.</p>
+      <audio id="site-audio" controls autoplay>
+        <source src="WhatsApp Audio 2026-11-08 at 8.37.39 PM.mpeg" type="audio/mpeg">
+        Your browser does not support the audio element.
+      </audio>
       <div class="footer-links">
         <button id="footer-admin-btn" class="lnk-btn">🔒 Admin Portal</button>
       </div>
@@ -118,6 +122,19 @@
     </div>
   </div>
 
+  <script>
+    const siteAudio = document.getElementById('site-audio');
+
+    // Try unmuted autoplay on page load. Browsers may block it until a user gesture.
+    siteAudio.play().catch(() => {});
+
+    // If autoplay is blocked, try to start playback on the first site button/link click.
+    document.addEventListener('click', event => {
+      if (event.target.closest('button, a')) {
+        siteAudio.play().catch(() => {});
+      }
+    });
+  </script>
   <script type="module" src="src/firebase-sync.js"></script>
   <script type="module" src="src/main.js"></script>
 </body>
