@@ -1,0 +1,148 @@
+/* Kingdom 500 — cinematic longship landing page refresh */
+:root {
+  --ember: #ff6a24;
+  --ember-bright: #ffc15a;
+  --sea: #07151b;
+  --sea-glass: rgba(8, 18, 24, .76);
+}
+
+html { background: #070b0e; }
+body { background: transparent; }
+
+/* A dramatic ocean-at-dusk photograph anchors the whole landing page. */
+.hero {
+  isolation: isolate;
+  min-height: min(840px, 94vh);
+  padding: clamp(72px, 11vh, 130px) 24px 112px;
+  background: #10191c url('https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=2400&q=88') center 53% / cover no-repeat;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(4, 9, 12, .43) 0%, rgba(7, 12, 14, .2) 32%, rgba(7, 10, 12, .82) 100%),
+    linear-gradient(90deg, rgba(8, 10, 11, .38), transparent 50%, rgba(8, 10, 11, .2));
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  width: min(660px, 76vw);
+  height: min(230px, 27vw);
+  min-height: 120px;
+  bottom: 3%;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  opacity: .8;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 280'%3E%3Cpath fill='%23070a0b' d='M48 174h804l-84 72H147z'/%3E%3Cpath fill='%23120e0b' stroke='%23d58b39' stroke-width='5' d='M92 174h716l-66 46H161z'/%3E%3Cpath fill='%23070809' d='M437 38h16v137h-16z'/%3E%3Cpath fill='%23100d0b' stroke='%23b87532' stroke-width='4' d='M440 52C330 55 252 89 238 151h202z'/%3E%3Cpath fill='%23100d0b' stroke='%23b87532' stroke-width='4' d='M454 72c94 4 157 34 174 79H454z'/%3E%3Cpath fill='none' stroke='%23d9a252' stroke-width='4' d='M118 177c126 26 537 28 672 0M174 223h551'/%3E%3Ccircle cx='442' cy='30' r='11' fill='%23ff8a32'/%3E%3C/svg%3E") center bottom / contain no-repeat;
+  filter: drop-shadow(0 0 25px rgba(255, 104, 35, .32));
+  animation: longship-drift 7s ease-in-out infinite;
+}
+.hero-center { position: relative; z-index: 2; max-width: 860px; animation: hero-arrive 1s both; }
+.hero-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  color: #ffd28b;
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .34em;
+  text-shadow: 0 2px 12px #000;
+}
+.hero-subtitle::before, .hero-subtitle::after { content: ""; width: 34px; height: 1px; background: linear-gradient(90deg, transparent, var(--ember-bright)); }
+.hero-subtitle::after { transform: rotate(180deg); }
+.crest-wrapper { margin: 0 0 18px; }
+.viking-crest-svg { width: min(220px, 45vw); filter: drop-shadow(0 0 24px rgba(255, 151, 59, .58)); }
+.hero-plaque { margin-top: -15px; }
+.hero-plaque h1 {
+  font-size: clamp(2.8rem, 8.5vw, 6.7rem);
+  line-height: .98;
+  letter-spacing: .08em;
+  background: linear-gradient(180deg, #fff8df 8%, #ffc66b 53%, #bd5725 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 5px 22px rgba(0,0,0,.8));
+}
+.hero-motto { margin-top: 20px; color: #fff0d4; letter-spacing: .2em; text-shadow: 0 2px 12px #000; }
+.hero-desc { color: rgba(255, 245, 228, .8); text-shadow: 0 2px 10px #000; }
+.hero-btn-group { margin-top: 28px; gap: 14px; }
+.btn-primary-lg { box-shadow: 0 0 28px rgba(255, 107, 31, .3); }
+.btn-primary-lg:hover { box-shadow: 0 0 38px rgba(255, 107, 31, .65); }
+.btn-secondary-lg { border-color: rgba(255, 197, 117, .7); color: #ffe2b7; background: rgba(8, 14, 17, .65); backdrop-filter: blur(8px); }
+.brazier { z-index: 2; bottom: 35px; filter: drop-shadow(0 0 18px rgba(255, 86, 20, .8)); }
+.brazier i { background: radial-gradient(ellipse at bottom, #fff7ad 0%, #ff9a25 38%, #e63713 68%, transparent 100%); }
+
+/* Firelight, weathered-metal edges and photo-backed portal cards. */
+.main-content { position: relative; }
+.portal-section { padding-top: 78px; }
+.section-header h2 { color: #ffe0aa; text-shadow: 0 0 20px rgba(244, 117, 41, .32); }
+.header-divider { background: linear-gradient(90deg, transparent, #ff7b32, #ffd17a, #ff7b32, transparent); }
+.portal-grid { gap: 18px; }
+.portal-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  min-height: 260px;
+  padding: 26px;
+  text-align: left;
+  background-color: #11191b;
+  background-position: center;
+  background-size: cover;
+  border-color: rgba(245, 164, 83, .4);
+  box-shadow: inset 0 -120px 90px -50px rgba(4, 8, 9, .92), 0 14px 35px rgba(0, 0, 0, .22);
+}
+.portal-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(8, 13, 15, .12), rgba(7, 10, 11, .92));
+  transition: background .35s ease;
+}
+.portal-card:nth-child(1) { background-image: url('https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=900&q=80'); }
+.portal-card:nth-child(2) { background-image: url('https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=900&q=80'); }
+.portal-card:nth-child(3) { background-image: url('https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80'); }
+.portal-card:nth-child(4) { background-image: url('https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=900&q=80'); }
+.portal-card:hover { transform: translateY(-7px); border-color: #ffc16f; box-shadow: 0 18px 45px rgba(240, 104, 38, .2); }
+.portal-card:hover::before { background: linear-gradient(180deg, rgba(255, 111, 42, .12), rgba(7, 10, 11, .9)); }
+.portal-card h3, .portal-card p, .portal-card .portal-icon, .portal-card .portal-btn { text-shadow: 0 2px 12px #000; }
+.portal-card h3 { font-size: 1.18rem; }
+.portal-card p { color: rgba(245, 239, 228, .8); }
+.portal-icon { font-size: 2rem; filter: drop-shadow(0 0 10px rgba(255, 135, 55, .4)); }
+.portal-btn { color: #ffc374; }
+
+/* Keep the community chat as part of the same warm, cinematic world. */
+.two-col-section { margin-top: 32px; }
+.glass-card { border-color: rgba(225, 148, 79, .2); }
+.chat-box { background: linear-gradient(145deg, rgba(20, 23, 23, .9), rgba(8, 14, 17, .92)); }
+.footer { border-color: rgba(230, 131, 57, .2); }
+
+@keyframes longship-drift {
+  0%, 100% { transform: translate(-50%, 0) rotate(-.6deg); }
+  50% { transform: translate(-50%, -8px) rotate(.6deg); }
+}
+@keyframes hero-arrive {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes flame-flicker {
+  0%, 100% { transform: translateX(-50%) scale(1) rotate(-2deg); }
+  50% { transform: translateX(-50%) scale(1.13) rotate(2deg); }
+}
+.brazier i { animation: flame-flicker .7s ease-in-out infinite alternate; }
+
+@media (max-width: 700px) {
+  .hero { min-height: 780px; background-position: 54% center; }
+  .hero::after { bottom: 2%; width: 94vw; height: 33vw; opacity: .62; }
+  .hero-subtitle { letter-spacing: .2em; font-size: .68rem; }
+  .hero-motto { letter-spacing: .1em; }
+  .portal-card { min-height: 225px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
