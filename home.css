@@ -9,12 +9,11 @@
 html { background: #070b0e; }
 body { background: transparent; }
 
-/* A dramatic ocean-at-dusk photograph anchors the whole landing page. */
 .hero {
   isolation: isolate;
   min-height: min(840px, 94vh);
   padding: clamp(72px, 11vh, 130px) 24px 112px;
-  background: #10191c url('https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=2400&q=88') center 53% / cover no-repeat;
+  background: #10191c url('https://upload.wikimedia.org/wikipedia/commons/9/99/Draken_Harald_H%C3%A5rfagre_Under_Sail.jpg') center 53% / cover no-repeat;
 }
 .hero::before {
   content: "";
@@ -77,7 +76,6 @@ body { background: transparent; }
 .brazier { z-index: 2; bottom: 35px; filter: drop-shadow(0 0 18px rgba(255, 86, 20, .8)); }
 .brazier i { background: radial-gradient(ellipse at bottom, #fff7ad 0%, #ff9a25 38%, #e63713 68%, transparent 100%); }
 
-/* Firelight, weathered-metal edges and photo-backed portal cards. */
 .main-content { position: relative; }
 .portal-section { padding-top: 78px; }
 .section-header h2 { color: #ffe0aa; text-shadow: 0 0 20px rgba(244, 117, 41, .32); }
@@ -116,7 +114,6 @@ body { background: transparent; }
 .portal-icon { font-size: 2rem; filter: drop-shadow(0 0 10px rgba(255, 135, 55, .4)); }
 .portal-btn { color: #ffc374; }
 
-/* Keep the community chat as part of the same warm, cinematic world. */
 .two-col-section { margin-top: 32px; }
 .glass-card { border-color: rgba(225, 148, 79, .2); }
 .chat-box { background: linear-gradient(145deg, rgba(20, 23, 23, .9), rgba(8, 14, 17, .92)); }

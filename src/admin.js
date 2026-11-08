@@ -1,26 +1,24 @@
 /**
  * KINGDOM 500 - LEADER ADMIN PORTAL & CMS MODULE
- * Passcode: Varsity24!
- * NO window.location.reload() — saves trigger SPA view refresh instead.
+ * Shared passcode: newarea500
  */
 
-import { leaders, defaultStats } from './data.js';
+import { leaders, defaultStats, SHARED_ACCESS_CODE } from './data.js';
 
 export class AdminEngine {
   constructor(audioEngine, rosterRef) {
-    this.audio   = audioEngine;
-    this.roster  = rosterRef;   // { players, savePlayers, formatNumber }
-    this.modal   = document.getElementById('admin-modal');
+    this.audio = audioEngine;
+    this.roster = rosterRef;
+    this.modal = document.getElementById('admin-modal');
     this.authBox = document.getElementById('admin-auth-box');
-    this.panelBox= document.getElementById('admin-panel');
-    this.passIn  = document.getElementById('admin-passcode');
-    this.errTxt  = document.getElementById('admin-auth-err');
-    this.PASS    = 'Varsity24!';
-    this.authed  = false;
+    this.panelBox = document.getElementById('admin-panel');
+    this.passIn = document.getElementById('admin-passcode');
+    this.errTxt = document.getElementById('admin-auth-err');
+    this.PASS = SHARED_ACCESS_CODE;
+    this.authed = false;
     this._bindStatic();
   }
 
-  // ── Static bindings (modal chrome, never re-created) ─────────────────────
   _bindStatic() {
     document.getElementById('admin-trigger')?.addEventListener('click', () => this.openModal());
     document.getElementById('footer-admin-btn')?.addEventListener('click', () => this.openModal());
@@ -33,8 +31,7 @@ export class AdminEngine {
     this.modal?.addEventListener('click', e => {
       if (e.target === this.modal) this.close();
     });
-    
-    // Tab switching
+
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
       btn.addEventListener('click', e => {
         document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
@@ -44,7 +41,6 @@ export class AdminEngine {
       });
     });
 
-    // Save buttons
     document.getElementById('save-stats-btn')?.addEventListener('click', () => this._saveStats());
     document.getElementById('save-officers-btn')?.addEventListener('click', () => this._saveOfficers());
     document.getElementById('add-player-btn')?.addEventListener('click', () => this._addPlayer());
@@ -65,14 +61,14 @@ export class AdminEngine {
   }
 
   _showAuth() {
-    if (this.authBox)  this.authBox.style.display  = 'flex';
+    if (this.authBox) this.authBox.style.display = 'flex';
     if (this.panelBox) this.panelBox.style.display = 'none';
-    if (this.errTxt)   this.errTxt.style.display   = 'none';
-    if (this.passIn)   this.passIn.value = '';
+    if (this.errTxt) this.errTxt.style.display = 'none';
+    if (this.passIn) this.passIn.value = '';
   }
 
   _showPanel() {
-    if (this.authBox)  this.authBox.style.display  = 'none';
+    if (this.authBox) this.authBox.style.display = 'none';
     if (this.panelBox) this.panelBox.style.display = 'block';
     this._loadStats();
     this._renderOfficers();
@@ -96,23 +92,22 @@ export class AdminEngine {
     }
   }
 
-  // ── Stats ───────────────────────────────────────────────────────────
   _loadStats() {
     const s = JSON.parse(localStorage.getItem('k500_custom_stats') || JSON.stringify(defaultStats));
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-    set('edit-stat-power',     s.power);
-    set('edit-stat-kills',     s.kills);
+    set('edit-stat-power', s.power);
+    set('edit-stat-kills', s.kills);
     set('edit-stat-alliances', s.alliances);
-    set('edit-stat-days',      s.days);
+    set('edit-stat-days', s.days);
   }
 
   _saveStats() {
     const get = id => parseInt(document.getElementById(id)?.value) || 0;
     const stats = {
-      power:     get('edit-stat-power')     || defaultStats.power,
-      kills:     get('edit-stat-kills')     || defaultStats.kills,
+      power: get('edit-stat-power') || defaultStats.power,
+      kills: get('edit-stat-kills') || defaultStats.kills,
       alliances: get('edit-stat-alliances') || defaultStats.alliances,
-      days:      get('edit-stat-days')      || defaultStats.days
+      days: get('edit-stat-days') || defaultStats.days
     };
     localStorage.setItem('k500_custom_stats', JSON.stringify(stats));
     if (window._currentPage === 'stats') window.navigateSPA('stats');
@@ -120,7 +115,6 @@ export class AdminEngine {
     this.audio?.playClick();
   }
 
-  // ── Officers ──────────────────────────────────────────────────────────
   _renderOfficers() {
     const container = document.getElementById('officers-editor-list');
     if (!container) return;
@@ -149,11 +143,11 @@ export class AdminEngine {
     for (let i = 0; i < 8; i++) {
       if (!saved[i]) continue;
       const g = id => document.getElementById(id)?.value.trim();
-      saved[i].name    = g(`off-name-${i}`)  || saved[i].name;
-      saved[i].role    = g(`off-role-${i}`)  || saved[i].role;
-      saved[i].alliance= g(`off-ally-${i}`)  || saved[i].alliance;
-      saved[i].photo   = g(`off-photo-${i}`) || saved[i].photo;
-      saved[i].desc    = g(`off-desc-${i}`)  || saved[i].desc;
+      saved[i].name = g(`off-name-${i}`) || saved[i].name;
+      saved[i].role = g(`off-role-${i}`) || saved[i].role;
+      saved[i].alliance = g(`off-ally-${i}`) || saved[i].alliance;
+      saved[i].photo = g(`off-photo-${i}`) || saved[i].photo;
+      saved[i].desc = g(`off-desc-${i}`) || saved[i].desc;
     }
     localStorage.setItem('k500_officers', JSON.stringify(saved));
     if (window._currentPage === 'leadership') window.navigateSPA('leadership');
@@ -161,17 +155,21 @@ export class AdminEngine {
     this.audio?.playClick();
   }
 
-  // ── Roster ──────────────────────────────────────────────────────────
   _addPlayer() {
-    const name  = document.getElementById('new-player-name')?.value.trim();
-    const ally  = document.getElementById('new-player-ally')?.value.trim() || 'xHTx';
+    const name = document.getElementById('new-player-name')?.value.trim();
+    const kingdom = document.getElementById('new-player-kingdom')?.value.trim() || 'Unknown';
     const power = parseInt(document.getElementById('new-player-power')?.value) || 35_000_000;
-    if (!name) { this._toast('❌ Enter warrior name!'); return; }
+    if (!name) {
+      this._toast('❌ Enter warrior name!');
+      return;
+    }
     this.roster.players.unshift({
       rank: this.roster.players.length + 1,
-      name, alliance: ally, power,
+      name,
+      currentKingdom: kingdom,
+      power,
       kills: Math.floor(power * 0.07),
-      share: '2.5%', status: 'Active'
+      status: 'Active'
     });
     this.roster.savePlayers();
     const cnt = document.getElementById('cms-player-count');
@@ -179,76 +177,60 @@ export class AdminEngine {
     this._toast(`✅ Warrior ${name} added!`);
     this.audio?.playClick();
     if (window._currentPage === 'roster') window.navigateSPA('roster');
-    ['new-player-name','new-player-ally','new-player-power'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value = '';
+    ['new-player-name', 'new-player-kingdom', 'new-player-power'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
     });
   }
 
-  // ── Activity feed editor ───────────────────────────────────────────────
   _loadActivityFeed() {
-    const titleInput = document.getElementById('activity-title-input');
-    const textInput = document.getElementById('activity-text-input');
-    const timeInput = document.getElementById('activity-time-input');
-    const feedPreview = document.getElementById('activity-feed-preview');
-    
     const items = JSON.parse(localStorage.getItem('k500_activity_feed') || '[]');
-    
-    if (feedPreview) {
-      if (!items.length) {
-        feedPreview.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">No activity feed entries yet.</p>';
-      } else {
-        feedPreview.innerHTML = items.map((item, idx) => `
-          <div class="feed-preview-item" style="background:rgba(0,0,0,0.3);padding:12px;border-radius:6px;margin-bottom:8px;border-left:3px solid var(--gold)">
-            <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
-              <div style="flex:1">
-                <div style="font-size:1.4rem;margin-bottom:4px">${item.icon || '⚔️'}</div>
-                <h4 style="color:var(--gold-light);margin-bottom:4px">${item.title || 'War Activity'}</h4>
-                <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:4px">${item.text || ''}</p>
-                <span style="font-size:0.75rem;color:var(--text-muted)">${item.time || 'Just now'}</span>
-              </div>
-              <button class="btn-gold-sm" style="padding:4px 8px;font-size:0.7rem" onclick="window.adminEngine._deleteActivityItem(${idx})">Remove</button>
-            </div>
-          </div>`).join('');
-      }
+    const preview = document.getElementById('activity-feed-preview');
+    if (!preview) return;
+    if (!items.length) {
+      preview.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">No activity feed entries yet.</p>';
+      return;
     }
+    preview.innerHTML = items.map((item, idx) => `
+      <div class="feed-preview-item" style="background:rgba(0,0,0,0.3);padding:12px;border-radius:6px;margin-bottom:8px;border-left:3px solid var(--gold)">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+          <div style="flex:1">
+            <div style="font-size:1.4rem;margin-bottom:4px">${item.icon || '⚔️'}</div>
+            <h4 style="color:var(--gold-light);margin-bottom:4px">${item.title || 'War Activity'}</h4>
+            <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:4px">${item.text || ''}</p>
+            <span style="font-size:0.75rem;color:var(--text-muted)">${item.time || 'Just now'}</span>
+          </div>
+          <button class="btn-gold-sm" style="padding:4px 8px;font-size:0.7rem" onclick="window.adminEngine._deleteActivityItem(${idx})">Remove</button>
+        </div>
+      </div>`).join('');
   }
 
   _saveActivityFeed() {
     const titleInput = document.getElementById('activity-title-input');
     const textInput = document.getElementById('activity-text-input');
     const timeInput = document.getElementById('activity-time-input');
-    
+
     const title = titleInput?.value.trim();
     const text = textInput?.value.trim();
     const time = timeInput?.value.trim() || 'Just now';
-    
+
     if (!title && !text) {
       this._toast('❌ Enter title or description!');
       return;
     }
 
     const items = JSON.parse(localStorage.getItem('k500_activity_feed') || '[]');
-    items.unshift({
-      icon: '⚔️',
-      title: title || 'War Activity',
-      text: text || '',
-      time: time
-    });
-
-    // Keep only last 20 items
+    items.unshift({ icon: '⚔️', title: title || 'War Activity', text: text || '', time });
     if (items.length > 20) items.pop();
-    
+
     localStorage.setItem('k500_activity_feed', JSON.stringify(items));
-    
-    // Clear inputs
     if (titleInput) titleInput.value = '';
     if (textInput) textInput.value = '';
     if (timeInput) timeInput.value = '';
-    
+
     this._loadActivityFeed();
     this._toast('✅ Activity entry added!');
     this.audio?.playClick();
-    
     if (window._currentPage === 'home') window.navigateSPA('home');
   }
 
@@ -270,7 +252,6 @@ export class AdminEngine {
     }
   }
 
-  // ── Duty log ──────────────────────────────────────────────────────────
   _renderDuty() {
     const log = JSON.parse(localStorage.getItem('k500_duty_log') || '[]');
     const cnt = document.getElementById('duty-count');
@@ -278,28 +259,30 @@ export class AdminEngine {
     const tbody = document.getElementById('admin-duty-tbody');
     if (!tbody) return;
     if (!log.length) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No roll call submissions yet.</td></tr>`;
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No roll call submissions yet.</td></tr>';
       return;
     }
     tbody.innerHTML = log.map(r => `
       <tr>
         <td><strong style="color:var(--gold-light)">${r.name}</strong></td>
         <td style="color:var(--text-muted)">${r.id || '-'}</td>
-        <td><span class="badge-tag badge-${r.alliance}">${r.alliance}</span></td>
+        <td>${r.currentKingdom || r.kingdom || '-'}</td>
         <td style="color:var(--gold)">${this.roster.formatNumber(r.power)}</td>
         <td>${r.notes || '-'}</td>
         <td style="font-size:0.8rem;color:var(--text-muted)">${r.registeredAt || 'Just now'}</td>
       </tr>`).join('');
   }
 
-  // ── CSV Export ─────────────────────────────────────────────────────────
   _exportCSV() {
     const log = JSON.parse(localStorage.getItem('k500_duty_log') || '[]');
-    if (!log.length) { this._toast('❌ No duty entries to export!'); return; }
-    const hdr = ['In-Game Name','Player ID','Alliance Tag','Might','Notes','Registration Time'];
-    const rows = log.map(r => [r.name, r.id||'', r.alliance, r.power, r.notes||'', r.registeredAt||''].map(v => `"${v}"`));
-    const csv  = 'data:text/csv;charset=utf-8,' + encodeURIComponent([hdr.join(','), ...rows.map(r => r.join(','))].join('\n'));
-    const a = Object.assign(document.createElement('a'), { href: csv, download: `K500_Duty_${new Date().toISOString().slice(0,10)}.csv` });
+    if (!log.length) {
+      this._toast('❌ No duty entries to export!');
+      return;
+    }
+    const hdr = ['In-Game Name', 'Player ID', 'Current Kingdom', 'Might', 'Notes', 'Registration Time'];
+    const rows = log.map(r => [r.name, r.id || '', r.currentKingdom || r.kingdom || '', r.power, r.notes || '', r.registeredAt || ''].map(v => `"${v}"`));
+    const csv = 'data:text/csv;charset=utf-8,' + encodeURIComponent([hdr.join(','), ...rows.map(r => r.join(','))].join('\n'));
+    const a = Object.assign(document.createElement('a'), { href: csv, download: `K500_Duty_${new Date().toISOString().slice(0, 10)}.csv` });
     document.body.appendChild(a); a.click(); a.remove();
     this._toast('✅ CSV downloaded!');
     this.audio?.playClick();
@@ -307,7 +290,7 @@ export class AdminEngine {
 
   _toast(msg) {
     const t = document.createElement('div');
-    t.style.cssText = 'position:fixed;bottom:80px;right:24px;background:rgba(34,197,94,0.15);border:1px solid #22c55e;color:#4ade80;padding:12px 20px;border-radius:8px;font-size:0.9rem;z-index:99;animation:slideIn 0.3s ease-out;';
+    t.style.cssText = 'position:fixed;bottom:80px;right:24px;background:rgba(34,197,94,0.15);border:1px solid #22c55e;color:#4ade80;padding:12px 20px;border-radius:8px;font-size:0.9rem;z-index:99';
     t.textContent = msg;
     document.body.appendChild(t);
     setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 3000);

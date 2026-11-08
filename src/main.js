@@ -9,22 +9,34 @@ import { CanvasEngine } from './canvas.js';
 import { AudioEngine } from './audio.js';
 import { I18nEngine } from './i18n.js';
 import { AdminEngine } from './admin.js';
-import { leaders, initialPlayers, defaultStats, channels, initialChatMessages, initialActivityFeed, generate80Players } from './data.js';
+import { leaders, initialPlayers, defaultStats, channels, initialChatMessages, initialActivityFeed, generate80Players, SHARED_ACCESS_CODE } from './data.js';
 
-// ─── State ───────────────────────────────────────────────────────────
+const PLAYER_STORAGE_KEY = 'k500_players';
+const CHAT_STORAGE_KEY = 'k500_chat';
+const CHAT_CHANNEL_NAME = 'k500_live_chat_channel';
+
 let audioEngine, canvasEngine, i18nEngine, adminEngine;
 let players = loadPlayers();
 let currentPage = 'home';
 let savedChatNick = localStorage.getItem('k500_chat_nick') || '';
+let liveChatChannel = null;
 
-// ─── Boot ───────���──────���────────────────────────────────────────────
+function resetStarterRoster() {
+  if (!localStorage.getItem('k500_roster_reset')) {
+    localStorage.removeItem(PLAYER_STORAGE_KEY);
+    localStorage.setItem('k500_roster_reset', '1');
+  }
+}
+resetStarterRoster();
+
+// Boot
+
 document.addEventListener('DOMContentLoaded', () => {
   canvasEngine = new CanvasEngine();
-  audioEngine  = new AudioEngine();
-  i18nEngine   = new I18nEngine();
-  adminEngine  = new AdminEngine(audioEngine, { get players() { return players; }, formatNumber, savePlayers });
+  audioEngine = new AudioEngine();
+  i18nEngine = new I18nEngine();
+  adminEngine = new AdminEngine(audioEngine, { get players() { return players; }, formatNumber, savePlayers });
 
-  // Soundtrack toggle button
   const sndBtn = document.getElementById('snd-btn');
   if (sndBtn) {
     sndBtn.addEventListener('click', () => {
@@ -32,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Language buttons
   document.getElementById('lang-en')?.addEventListener('click', () => {
     audioEngine.playClick(); i18nEngine.setLang('en');
   });
@@ -40,26 +51,21 @@ document.addEventListener('DOMContentLoaded', () => {
     audioEngine.playClick(); i18nEngine.setLang('ru');
   });
 
-  // Logo → home
   document.getElementById('logo-home')?.addEventListener('click', () => navigate('home'));
 
-  // Nav links (SPA — no page reload)
   document.querySelectorAll('.nav-link').forEach(a => {
     a.addEventListener('click', e => { e.preventDefault(); navigate(a.dataset.page); });
   });
 
-  // Hash-based routing on first load
   const hashPage = location.hash.replace('#', '') || 'home';
   navigate(hashPage);
 });
 
-// ─── Router ──────────────────────────────────────────────────────────
 function navigate(page) {
   currentPage = page;
-  window._currentPage = page;  // used by admin.js to refresh current view
+  window._currentPage = page;
   location.hash = page;
 
-  // Update active nav link
   document.querySelectorAll('.nav-link').forEach(a => {
     a.classList.toggle('active', a.dataset.page === page || (page === 'home' && a.dataset.page === 'home'));
   });
@@ -68,40 +74,61 @@ function navigate(page) {
   if (!content) return;
 
   switch (page) {
-    case 'home':   content.innerHTML = renderHome();       afterHome();       break;
-    case 'why':    content.innerHTML = renderWhy();        break;
-    case 'stats':  content.innerHTML = renderStats();      afterStats();      break;
-    case 'leadership': content.innerHTML = renderLeadership(); afterLeadership(); break;
-    case 'roster': content.innerHTML = renderRoster();     afterRoster();     break;
-    case 'apply':  content.innerHTML = renderApply();      afterApply();      break;
-    default:       content.innerHTML = renderHome();       afterHome();
+    case 'home':
+      content.innerHTML = renderHome();
+      afterHome();
+      break;
+    case 'why':
+      content.innerHTML = renderWhy();
+      break;
+    case 'stats':
+      content.innerHTML = renderStats();
+      afterStats();
+      break;
+    case 'leadership':
+      content.innerHTML = renderLeadership();
+      afterLeadership();
+      break;
+    case 'roster':
+      content.innerHTML = renderRoster();
+      afterRoster();
+      break;
+    case 'apply':
+      content.innerHTML = renderApply();
+      afterApply();
+      break;
+    default:
+      content.innerHTML = renderHome();
+      afterHome();
   }
 }
 
-// ─── Back button helper ──────────────────────────────────────────────────────
 function backBtn() {
   return `<button class="back-link" onclick="window.navigateSPA('home')">← Back to Kingdom Hub</button>`;
 }
 window.navigateSPA = navigate;
 
-// ─── Helper: format numbers ────────────────────────────────────────────────────
 function formatNumber(val) {
   if (typeof val === 'number') {
     if (val >= 1_000_000_000) return (val / 1_000_000_000).toFixed(2) + 'B';
-    if (val >= 1_000_000)     return (val / 1_000_000).toFixed(1) + 'M';
-    if (val >= 1_000)         return (val / 1_000).toFixed(0) + 'K';
+    if (val >= 1_000_000) return (val / 1_000_000).toFixed(1) + 'M';
+    if (val >= 1_000) return (val / 1_000).toFixed(0) + 'K';
     return val.toLocaleString();
   }
   return val;
 }
 
-// ─── Player persistence ──────────────────────────────────────────────────────
 function loadPlayers() {
-  try { return JSON.parse(localStorage.getItem('k500_players')) || generate80Players(); }
-  catch { return generate80Players(); }
+  try {
+    const saved = JSON.parse(localStorage.getItem(PLAYER_STORAGE_KEY) || '[]');
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
 }
+
 function savePlayers() {
-  localStorage.setItem('k500_players', JSON.stringify(players));
+  localStorage.setItem(PLAYER_STORAGE_KEY, JSON.stringify(players));
 }
 
 function loadWarActivity() {
@@ -113,11 +140,6 @@ function loadWarActivity() {
   }
 }
 
-// ────────────────────────────────────────────────────────────────
-//  PAGE TEMPLATES
-// ────────────────────────────────────────────────────────────────
-
-// ── HOME ────────────────────────────────────────────────────────────
 function renderHome() {
   return `
   <header class="hero" id="hero-section">
@@ -132,7 +154,7 @@ function renderHome() {
               <stop offset="0%" stop-color="#fff5c0"/><stop offset="50%" stop-color="#e6b84c"/><stop offset="100%" stop-color="#8a5a12"/>
             </linearGradient>
           </defs>
-          <g><rect x="196" y="20" width="8" height="190" rx="4" fill="#5c3818"/><path d="M200 24 C150 4 112 40 128 88 C160 72 186 72 200 84Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="2"/><path d="M200 24 C250 4 288 40 272 88 C240 72 214 72 200 84Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="2"/><path d="M166 62 C140 56 128 30 140 8 C146 34 160 44 172 50Z" fill="url(#gold-grad)"/><path d="M234 62 C260 56 272 30 260 8 C254 34 240 44 228 50Z" fill="url(#gold-grad)"/><path d="M160 150 C158 80 242 80 240 150Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="2"/><rect x="195" y="110" width="10" height="50" fill="url(#gold-grad)"/><rect x="172" y="118" width="56" height="8" fill="#120a02"/></g>
+          <g><rect x="196" y="20" width="8" height="190" rx="4" fill="#5c3818"/><path d="M200 24 C150 4 112 40 128 88 C160 72 186 72 200 84Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="3"/><path d="M200 84 L250 120 L200 180 L150 120 Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="3"/><circle cx="200" cy="120" r="32" fill="rgba(255,255,255,0.15)"/><path d="M200 28 L180 112 L200 172 L220 112 Z" fill="none" stroke="#f5d069" stroke-width="4" opacity="0.9"/></g>
         </svg>
         <div class="hero-plaque"><h1>KINGDOM 500</h1></div>
       </div>
@@ -165,14 +187,14 @@ function renderHome() {
           <span class="portal-btn">Open Council Chamber →</span>
         </button>
         <button class="portal-card glass-card" onclick="navigateSPA('roster')">
-          <div class="portal-icon">⚔️</div><h3>Warrior Roster (80+ Champions)</h3>
-          <p>Full leaderboard of active warriors, might rankings and KvK shares.</p>
+          <div class="portal-icon">⚔️</div><h3>Warrior Roster</h3>
+          <p>Full leaderboard of active warriors, their power, kingdom, and readiness.</p>
           <span class="portal-btn">Open Leaderboard →</span>
         </button>
         <button class="portal-card glass-card" onclick="navigateSPA('apply')">
-          <div class="portal-icon">🛡️</div><h3>Roll Call - Report for Duty</h3>
-          <p>Register your troop strength and war readiness for the upcoming KvK.</p>
-          <span class="portal-btn">Report for Duty →</span>
+          <div class="portal-icon">🛡️</div><h3>Apply for Migration</h3>
+          <p>Register your details and request to join the next campaign.</p>
+          <span class="portal-btn">Apply Now →</span>
         </button>
       </div>
     </section>
@@ -200,7 +222,6 @@ function afterHome() {
   initChat();
 }
 
-// ── WHY 500 ───────────────────────────────────────────────────────────
 function renderWhy() {
   return `
   <main class="main-content subpage-content">
@@ -211,10 +232,10 @@ function renderWhy() {
     </div>
     <section class="section">
       <div class="cards-grid">
-        <div class="card glass-card"><div class="card-icon">🛡️</div><h3 style="color:var(--ice)">One Family First</h3><p class="card-text">Nobody fights alone. Every player is supported by dedicated leaders and trusted allies.</p></div>
-        <div class="card glass-card"><div class="card-icon">⚡</div><h3 style="color:var(--gold)">24/7 Global Presence</h3><p class="card-text">Chat, voice, rallies and defense runs around the clock.</p></div>
-        <div class="card glass-card"><div class="card-icon">👑</div><h3 style="color:var(--crimson-light)">One Unified Goal</h3><p class="card-text">We plan war campaigns together, share reward intel and hold a single strategic direction.</p></div>
-        <div class="card glass-card"><div class="card-icon">📜</div><h3 style="color:var(--ice-glow)">Zero Drama & Fair Loot</h3><p class="card-text">Transparent council decisions, automated KvK rules and consistent support for every member.</p></div>
+        <div class="card glass-card"><div class="card-icon">🛡️</div><h3 style="color:var(--ice)">One Family First</h3><p class="card-text">Nobody fights alone. Every player is supported by dedicated leaders and experienced KvK veterans. We defend each other without hesitation.</p></div>
+        <div class="card glass-card"><div class="card-icon">⚡</div><h3 style="color:var(--gold)">24/7 Global Presence</h3><p class="card-text">Chat, voice strategy, rallies, and defense runs around the clock across all global time zones (NA, EU, ASIA).</p></div>
+        <div class="card glass-card"><div class="card-icon">👑</div><h3 style="color:var(--crimson-light)">One Unified Goal</h3><p class="card-text">We plan war campaigns together, share rewards fairly based on contribution, and conquer as one unified kingdom.</p></div>
+        <div class="card glass-card"><div class="card-icon">📜</div><h3 style="color:var(--ice-glow)">Zero Drama & Fair Loot</h3><p class="card-text">Transparent kingdom council decisions, automated KvK reward distribution, and strict zero-drama enforcement.</p></div>
       </div>
     </section>
 
@@ -227,7 +248,7 @@ function renderWhy() {
             <span><small>GET IT ON</small><strong>Google Play</strong></span>
           </a>
           <a class="store-btn apple" href="https://apps.apple.com/us/app/viking-rise-train-your-dragon/id6443577184" target="_blank" rel="noreferrer">
-            <span class="store-logo"></span>
+            <span class="store-logo"></span>
             <span><small>Download on the</small><strong>App Store</strong></span>
           </a>
         </div>
@@ -240,7 +261,6 @@ function renderWhy() {
   </main>`;
 }
 
-// ── STATS ───────────────────────────────────────────────────────────
 function renderStats() {
   const s = JSON.parse(localStorage.getItem('k500_custom_stats') || JSON.stringify(defaultStats));
   return `
@@ -267,7 +287,6 @@ function afterStats() {
   });
 }
 
-// ── LEADERSHIP ──────────────────────────────────────────────────────────
 function renderLeadership() {
   const officers = JSON.parse(localStorage.getItem('k500_officers') || JSON.stringify(leaders));
   const cards = officers.map(o => `
@@ -296,7 +315,6 @@ function renderLeadership() {
 
 function afterLeadership() {}
 
-// ── ROSTER ───────────────────────────────────────────────────────────
 function renderRoster() {
   return `
   <main class="main-content subpage-content">
@@ -307,15 +325,8 @@ function renderRoster() {
     </div>
     <section class="section">
       <div class="roster-controls glass-card">
-        <div class="search-box"><input type="text" id="roster-search" placeholder="Search warrior name, ID or alliance..."></div>
+        <div class="search-box"><input type="text" id="roster-search" placeholder="Search warrior name or kingdom..."></div>
         <div class="filter-group">
-          <select id="alliance-filter">
-            <option value="ALL">All Alliances</option>
-            <option value="xHTx">xHTx - House of Thor</option>
-            <option value="xVGx">xVGx - Valhalla Guard</option>
-            <option value="xNKx">xNKx - Norse Kings</option>
-            <option value="xRAx">xRAx - Rune Academy</option>
-          </select>
           <select id="sort-filter">
             <option value="power">Sort by Might</option>
             <option value="kills">Sort by Kills</option>
@@ -325,7 +336,7 @@ function renderRoster() {
       </div>
       <div class="table-container glass-card">
         <table class="roster-table">
-          <thead><tr><th>#</th><th>Player</th><th>Alliance</th><th>Might</th><th>Kills</th><th>KvK Share</th><th>Status</th></tr></thead>
+          <thead><tr><th>#</th><th>Player</th><th>Current Kingdom</th><th>Might</th><th>Status</th></tr></thead>
           <tbody id="roster-tbody"></tbody>
         </table>
       </div>
@@ -336,7 +347,6 @@ function renderRoster() {
 function afterRoster() {
   renderTable();
   document.getElementById('roster-search')?.addEventListener('input', renderTable);
-  document.getElementById('alliance-filter')?.addEventListener('change', renderTable);
   document.getElementById('sort-filter')?.addEventListener('change', renderTable);
 }
 
@@ -344,35 +354,36 @@ function renderTable() {
   const tbody = document.getElementById('roster-tbody');
   if (!tbody) return;
 
-  const search   = (document.getElementById('roster-search')?.value || '').toLowerCase();
-  const alliance = document.getElementById('alliance-filter')?.value || 'ALL';
-  const sort     = document.getElementById('sort-filter')?.value || 'power';
+  const search = (document.getElementById('roster-search')?.value || '').toLowerCase();
+  const sort = document.getElementById('sort-filter')?.value || 'power';
 
   let list = [...players];
-  if (search)        list = list.filter(p => p.name.toLowerCase().includes(search) || p.alliance.toLowerCase().includes(search) || String(p.id || '').includes(search));
-  if (alliance !== 'ALL') list = list.filter(p => p.alliance === alliance);
-  list.sort((a, b) => sort === 'name' ? a.name.localeCompare(b.name) : (sort === 'kills' ? (b.kills - a.kills) : (b.power - a.power)));
+  if (search) {
+    list = list.filter(p => {
+      const kingdom = (p.currentKingdom || p.kingdom || '').toLowerCase();
+      return (p.name || '').toLowerCase().includes(search) || kingdom.includes(search) || String(p.id || '').includes(search);
+    });
+  }
+
+  list.sort((a, b) => sort === 'name' ? (a.name || '').localeCompare(b.name || '') : (sort === 'kills' ? (b.kills || 0) - (a.kills || 0) : (b.power || 0) - (a.power || 0)));
 
   tbody.innerHTML = list.map((p, i) => `
     <tr>
       <td style="font-weight:700;color:var(--gold)">#${i + 1}</td>
-      <td><strong>${p.name}</strong></td>
-      <td><span class="badge-tag badge-${p.alliance}">${p.alliance}</span></td>
-      <td style="color:var(--gold-light);font-weight:600">${formatNumber(p.power)}</td>
-      <td style="color:var(--crimson-light)">${formatNumber(p.kills)}</td>
-      <td>${p.share || '2.0%'}</td>
-      <td><span class="status-indicator"><span class="status-dot"></span> Ready</span></td>
+      <td><strong>${p.name || 'Unknown'}</strong></td>
+      <td>${p.currentKingdom || p.kingdom || 'Unassigned'}</td>
+      <td style="color:var(--gold-light);font-weight:600">${formatNumber(p.power || 0)}</td>
+      <td><span class="status-indicator"><span class="status-dot"></span> ${p.status || 'Ready'}</span></td>
     </tr>`).join('');
 }
 
-// ── APPLY ───────────────────────────────────────────────────────────
 function renderApply() {
   return `
   <main class="main-content subpage-content">
     <div class="subpage-header">
       ${backBtn()}
-      <h1>ROLL CALL — REPORT FOR DUTY</h1>
-      <p class="section-subtitle">Sign in so leaders know you are active and ready for the next KvK campaign.</p>
+      <h1>APPLY FOR MIGRATION</h1>
+      <p class="section-subtitle">Submit your details for review. Access is protected by the shared kingdom code.</p>
     </div>
     <section class="section">
       <div class="form-container glass-card">
@@ -382,19 +393,12 @@ function renderApply() {
             <div class="form-group"><label>Player ID</label><input type="text" id="reg-id" maxlength="16" placeholder="e.g. 50098231"></div>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>Alliance Tag</label>
-              <select id="reg-ally">
-                <option value="xHTx">xHTx - House of Thor</option>
-                <option value="xVGx">xVGx - Valhalla Guard</option>
-                <option value="xNKx">xNKx - Norse Kings</option>
-                <option value="xRAx">xRAx - Rune Academy</option>
-                <option value="Independent">Independent</option>
-              </select>
-            </div>
+            <div class="form-group"><label>Current Kingdom *</label><input type="text" id="reg-kingdom" maxlength="40" placeholder="e.g. Midgard, Asgard, Jotunheim"></div>
             <div class="form-group"><label>Estimated Might</label><input type="text" id="reg-might" maxlength="12" placeholder="e.g. 52M"></div>
           </div>
+          <div class="form-group"><label>Verification Code *</label><input type="password" id="reg-code" maxlength="30" placeholder="Enter shared kingdom code" required></div>
           <div class="form-group"><label>War Readiness / Notes</label><input type="text" id="reg-notes" maxlength="100" placeholder="e.g. T5 unlocked, active EU timezone"></div>
-          <button class="btn-primary-block" type="submit">🛡️ Report for Duty</button>
+          <button class="btn-primary-block" type="submit">🛡️ Apply for Migration</button>
         </form>
         <div id="roll-status-msg" class="status-msg" style="display:none;"></div>
       </div>
@@ -408,15 +412,38 @@ function afterApply() {
 
 function handleRollSubmit(e) {
   e.preventDefault();
-  const name  = document.getElementById('reg-name')?.value.trim();
-  const id    = document.getElementById('reg-id')?.value.trim();
-  const ally  = document.getElementById('reg-ally')?.value;
+  const name = document.getElementById('reg-name')?.value.trim();
+  const id = document.getElementById('reg-id')?.value.trim();
+  const kingdom = document.getElementById('reg-kingdom')?.value.trim();
   const might = document.getElementById('reg-might')?.value.trim();
   const notes = document.getElementById('reg-notes')?.value.trim();
-  if (!name) return;
+  const code = document.getElementById('reg-code')?.value.trim();
+  const msg = document.getElementById('roll-status-msg');
+
+  if (!name || !kingdom || !code) {
+    if (msg) {
+      msg.style.display = 'block';
+      msg.style.background = 'rgba(153, 27, 27, 0.2)';
+      msg.style.borderColor = '#f87171';
+      msg.style.color = '#fca5a5';
+      msg.textContent = '❌ Please fill in your name, current kingdom, and verification code.';
+    }
+    return;
+  }
+
+  if (code !== SHARED_ACCESS_CODE) {
+    if (msg) {
+      msg.style.display = 'block';
+      msg.style.background = 'rgba(153, 27, 27, 0.2)';
+      msg.style.borderColor = '#f87171';
+      msg.style.color = '#fca5a5';
+      msg.textContent = '❌ Invalid verification code. Use the shared kingdom code.';
+    }
+    return;
+  }
 
   let power = 45_000_000;
-  const m = might.match(/(\d+(\.\d+)?)\s*([mMbBkK])?/i);
+  const m = might ? might.match(/(\d+(\.\d+)?)\s*([mMbBkK])?/i) : null;
   if (m) {
     let v = parseFloat(m[1]);
     const u = (m[3] || '').toUpperCase();
@@ -426,7 +453,18 @@ function handleRollSubmit(e) {
     power = v;
   }
 
-  const entry = { rank: players.length + 1, name, id: id || `ID-${Math.floor(Math.random()*900000+100000)}`, alliance: ally, power, kills: Math.floor(power*0.08), share: '2.5%', status: 'Active', notes: notes || 'Ready for first call' };
+  const entry = {
+    rank: players.length + 1,
+    name,
+    id: id || `ID-${Math.floor(Math.random() * 900000 + 100000)}`,
+    currentKingdom: kingdom,
+    power,
+    kills: Math.floor(power * 0.08),
+    status: 'Ready',
+    notes,
+    registeredAt: new Date().toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+  };
+
   players.unshift(entry);
   savePlayers();
 
@@ -434,13 +472,19 @@ function handleRollSubmit(e) {
   log.unshift(entry);
   localStorage.setItem('k500_duty_log', JSON.stringify(log));
 
-  audioEngine.playClick();
-  const msg = document.getElementById('roll-status-msg');
-  if (msg) { msg.style.display = 'block'; msg.textContent = `🛡️ Hail Warrior ${name}! Your duty report has been registered!`; setTimeout(() => msg.style.display = 'none', 5000); }
+  if (msg) {
+    msg.style.display = 'block';
+    msg.style.background = 'rgba(34, 197, 94, 0.15)';
+    msg.style.borderColor = '#22c55e';
+    msg.style.color = '#4ade80';
+    msg.textContent = `✅ Hail Warrior ${name}! Your migration request has been registered.`;
+    setTimeout(() => msg.style.display = 'none', 5000);
+  }
+
   document.getElementById('roll-form').reset();
+  audioEngine.playClick();
 }
 
-// ─── Animated Counter ───────────────────────────────────────────────────────
 function animateCounter(el, target) {
   let current = 0;
   const steps = 60;
@@ -452,11 +496,44 @@ function animateCounter(el, target) {
   }, 30);
 }
 
-// ─── Chat ───────────────────────────────────────────────────────────
 let chatMessages = [];
-try { chatMessages = JSON.parse(localStorage.getItem('k500_chat')) || []; } catch { chatMessages = []; }
+try {
+  chatMessages = JSON.parse(localStorage.getItem(CHAT_STORAGE_KEY) || '[]');
+} catch {
+  chatMessages = [];
+}
+
+function setupLiveChat() {
+  if ('BroadcastChannel' in window) {
+    liveChatChannel = new BroadcastChannel(CHAT_CHANNEL_NAME);
+    liveChatChannel.onmessage = (event) => {
+      const incoming = event.data && event.data.type === 'chat' ? event.data.message : null;
+      if (!incoming) return;
+      const exists = chatMessages.some(m => m.time === incoming.time && m.nick === incoming.nick && m.text === incoming.text);
+      if (!exists) {
+        chatMessages.push(incoming);
+        if (chatMessages.length > 50) chatMessages.shift();
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chatMessages));
+        renderChatMessages();
+      }
+    };
+  }
+
+  window.addEventListener('storage', (event) => {
+    if (event.key !== CHAT_STORAGE_KEY || !event.newValue) return;
+    try {
+      const next = JSON.parse(event.newValue || '[]');
+      if (Array.isArray(next)) {
+        chatMessages = next;
+        renderChatMessages();
+      }
+    } catch {}
+  });
+}
 
 function initChat() {
+  setupLiveChat();
+
   const nickInput = document.getElementById('chat-nick');
   if (nickInput && savedChatNick) {
     nickInput.value = savedChatNick;
@@ -472,9 +549,11 @@ function initChat() {
     savedChatNick = nick;
     localStorage.setItem('k500_chat_nick', nick);
 
-    chatMessages.push({ nick, text, time: now() });
-    if (chatMessages.length > 30) chatMessages.shift();
-    localStorage.setItem('k500_chat', JSON.stringify(chatMessages));
+    const message = { nick, text, time: now() };
+    chatMessages.push(message);
+    if (chatMessages.length > 50) chatMessages.shift();
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chatMessages));
+    if (liveChatChannel) liveChatChannel.postMessage({ type: 'chat', message });
     renderChatMessages();
     document.getElementById('chat-text').value = '';
     audioEngine.playClick();
@@ -492,4 +571,6 @@ function renderChatMessages() {
   el.scrollTop = el.scrollHeight;
 }
 
-function now() { return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
+function now() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
