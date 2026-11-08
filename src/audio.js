@@ -1,75 +1,22 @@
 /**
  * KINGDOM 500 - AUDIO ENGINE
- * Uses the single persistent hidden audio element already in the DOM.
- * The uploaded soundtrack plays on a loop and starts after the first user interaction.
+ * The soundtrack plays through the footer player in index.html (site-audio).
+ * This class only provides the small button click sound.
  */
-
-const SOUNDTRACK_SRC = new URL('../WhatsApp Audio 2026-11-08 at 8.37.39 PM.mpeg', import.meta.url).href;
 
 export class AudioEngine {
   constructor() {
-    this.audio = document.getElementById('background-audio') || this._createAudioElement();
-    this.audio.src = SOUNDTRACK_SRC;
-    this.audio.loop = true;
-    this.audio.volume = 0.3;
-    this.audio.preload = 'auto';
-    this.audio.muted = false;
-    this.isPlaying = false;
-    this.hasStarted = false;
-
-    this._setupFirstInteraction();
-  }
-
-  _createAudioElement() {
-    const audio = document.createElement('audio');
-    audio.id = 'background-audio';
-    audio.preload = 'auto';
-    audio.loop = true;
-    audio.playsInline = true;
-    audio.style.display = 'none';
-    document.body.appendChild(audio);
-    return audio;
-  }
-
-  _setupFirstInteraction() {
-    const startPlayback = () => {
-      if (this.hasStarted) return;
-      this.hasStarted = true;
-      document.removeEventListener('pointerdown', startPlayback);
-      document.removeEventListener('keydown', startPlayback);
-      this._play();
-    };
-
-    document.addEventListener('pointerdown', startPlayback, { once: true });
-    document.addEventListener('keydown', startPlayback, { once: true });
-  }
-
-  _play() {
-    this.audio.play()
-      .then(() => {
-        this.isPlaying = true;
-      })
-      .catch(() => {
-        this.isPlaying = false;
-      });
-  }
-
-  toggleSoundtrack(callback) {
-    if (this.audio.paused) {
-      this.hasStarted = true;
-      this._play();
-    } else {
-      this.audio.pause();
-      this.isPlaying = false;
-    }
-
-    if (typeof callback === 'function') callback(!this.audio.paused);
+    this._ctx = null;
   }
 
   playClick() {
     try {
       const Ctx = window.AudioContext || window.webkitAudioContext;
-      const ctx = new Ctx();
+      if (!Ctx) return;
+      if (!this._ctx) this._ctx = new Ctx();
+      const ctx = this._ctx;
+      if (ctx.state === 'suspended') ctx.resume();
+
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
@@ -83,4 +30,8 @@ export class AudioEngine {
       osc.stop(ctx.currentTime + 0.06);
     } catch (_) {}
   }
+
+  // Kept so existing calls in main.js don't break. The song is controlled
+  // by the footer player, so this intentionally does nothing.
+  toggleSoundtrack() {}
 }

@@ -17,8 +17,6 @@
   <canvas id="lightning-canvas"></canvas>
   <div id="dim-overlay"></div>
 
-  <audio id="background-audio" preload="auto" loop playsinline style="display:none;"></audio>
-
   <nav class="nav" id="top">
     <div class="nav-container">
       <div class="logo" style="cursor:pointer;" id="logo-home">
@@ -27,20 +25,11 @@
       </div>
       <div class="nav-links">
         <a href="#" class="nav-link active" data-page="home">HOME</a>
+        <a href="#" class="nav-link" data-page="leadership">COUNCIL</a>
         <a href="#" class="nav-link" data-page="why">WHY 500</a>
       </div>
       <div class="nav-actions">
-        <div class="lang-switch">
-          <button id="lang-en" class="lang-btn active" type="button">EN</button>
-          <span>|</span>
-          <button id="lang-ru" class="lang-btn" type="button">РУ</button>
-        </div>
-        <button id="snd-btn" class="btn-icon" type="button" title="Background soundtrack">
-          🎵 <span id="snd-btn-text">Background Music</span>
-        </button>
-        <button id="admin-trigger" class="btn-outline-sm" type="button">
-          🔒 <span>Admin</span>
-        </button>
+        <button id="admin-trigger" class="btn-outline-sm" type="button">🔒 <span>Admin</span></button>
       </div>
     </div>
   </nav>
@@ -50,6 +39,10 @@
   <footer class="footer">
     <div class="footer-container">
       <p>Kingdom 500 • One Family, One Kingdom, One Goal. Viking Rise Community Hub.</p>
+      <audio id="site-audio" controls autoplay>
+        <source src="WhatsApp Audio 2026-11-08 at 8.37.39 PM.mpeg" type="audio/mpeg">
+        Your browser does not support the audio element.
+      </audio>
       <div class="footer-links">
         <button id="footer-admin-btn" class="lnk-btn">🔒 Admin Portal</button>
       </div>
@@ -128,6 +121,13 @@
     </div>
   </div>
 
+  <script>
+    const siteAudio = document.getElementById('site-audio');
+    siteAudio.play().catch(() => {});
+    document.addEventListener('click', event => {
+      if (event.target.closest('button, a')) siteAudio.play().catch(() => {});
+    });
+  </script>
   <script type="module" src="src/firebase-sync.js"></script>
   <script type="module" src="src/main.js"></script>
 </body>

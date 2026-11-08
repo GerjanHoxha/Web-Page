@@ -13,7 +13,6 @@
   <canvas id="bg-canvas"></canvas>
   <canvas id="ember-canvas"></canvas>
   <canvas id="lightning-canvas"></canvas>
-  <audio id="background-audio" preload="auto" loop playsinline style="display:none;"></audio>
   <div id="dim-overlay"></div>
 
   <nav class="nav">
@@ -48,9 +47,6 @@
           <select id="alliance-filter">
             <option value="ALL">All Alliances</option>
             <option value="xHTx">xHTx - House of Thor</option>
-            <option value="xVGx">xHTx - House of Thor</option>
-            <option value="xNKx">xHTx - House of Thor</option>
-            <option value="xRAx">xHTx - House of Thor</option>
           </select>
           <select id="sort-filter">
             <option value="power">Sort by Might (High to Low)</option>
@@ -73,7 +69,8 @@
               <th>Status</th>
             </tr>
           </thead>
-          <tbody id="roster-tbody"></tbody>
+          <tbody id="roster-tbody">
+          </tbody>
         </table>
       </div>
     </section>
