@@ -12,7 +12,6 @@
   <link rel="stylesheet" href="home.css">
 </head>
 <body>
-
   <canvas id="bg-canvas"></canvas>
   <canvas id="ember-canvas"></canvas>
   <canvas id="lightning-canvas"></canvas>
@@ -44,7 +43,7 @@
           🎵 <span id="snd-btn-text">Valhalla Calling</span>
         </button>
         <button id="admin-trigger" class="btn-outline-sm" type="button">
-          🔒 <span>Leaders</span>
+          🔒 <span>Admin</span>
         </button>
       </div>
     </div>
@@ -56,7 +55,7 @@
     <div class="footer-container">
       <p>Kingdom 500 • One Family, One Kingdom, One Goal. Viking Rise Community Hub.</p>
       <div class="footer-links">
-        <button id="footer-admin-btn" class="lnk-btn">🔒 Leader Portal</button>
+        <button id="footer-admin-btn" class="lnk-btn">🔒 Admin Portal</button>
       </div>
     </div>
   </footer>
@@ -65,7 +64,7 @@
     <div class="modal-card glass-card">
       <button class="modal-close-btn" id="admin-close">&times;</button>
       <div class="modal-header">
-        <h2>🔒 LEADERS ONLY PORTAL</h2>
+        <h2>🔒 ADMIN PORTAL</h2>
         <p class="modal-sub">Enter council passcode to update kingdom info and download logs.</p>
       </div>
 
@@ -78,7 +77,7 @@
       <div id="admin-panel" class="admin-panel-content" style="display:none;">
         <div class="admin-tabs">
           <button class="admin-tab-btn active" data-tab="cms-stats">📊 Kingdom Stats</button>
-          <button class="admin-tab-btn" data-tab="cms-officers">👑 8 Officers</button>
+          <button class="admin-tab-btn" data-tab="cms-officers">👑 Council Officers</button>
           <button class="admin-tab-btn" data-tab="cms-roster">⚔️ Warriors</button>
           <button class="admin-tab-btn" data-tab="cms-duty">📜 Duty Log</button>
           <button class="admin-tab-btn" data-tab="cms-activity">📣 Activity Feed</button>
@@ -87,30 +86,15 @@
         <div id="cms-stats" class="cms-tab-content active">
           <h3>Edit Kingdom Live Stats</h3>
           <div class="form-row">
-            <div class="form-group">
-              <label>Total Kingdom Might</label>
-              <input type="number" id="edit-stat-power" placeholder="3250000000">
-            </div>
-            <div class="form-group">
-              <label>Units Eliminated</label>
-              <input type="number" id="edit-stat-kills" placeholder="28400000">
-            </div>
+            <div class="form-group"><label>Total Kingdom Might</label><input type="number" id="edit-stat-power" placeholder="3250000000"></div>
+            <div class="form-group"><label>Active Alliances</label><input type="number" id="edit-stat-alliances" placeholder="4"></div>
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Active Alliances</label>
-              <input type="number" id="edit-stat-alliances" placeholder="4">
-            </div>
-            <div class="form-group">
-              <label>Kingdom Days Active</label>
-              <input type="number" id="edit-stat-days" placeholder="485">
-            </div>
-          </div>
+          <div class="form-row"><div class="form-group"><label>Kingdom Days Active</label><input type="number" id="edit-stat-days" placeholder="485"></div></div>
           <button class="btn-gold-sm" id="save-stats-btn">Save Stats</button>
         </div>
 
         <div id="cms-officers" class="cms-tab-content">
-          <h3>Edit 8 Council Officers & Photos</h3>
+          <h3>Edit Council Officers & Photos</h3>
           <div id="officers-editor-list"></div>
           <button class="btn-gold-sm" id="save-officers-btn" style="margin-top:14px">Save Officers</button>
         </div>
@@ -118,9 +102,8 @@
         <div id="cms-roster" class="cms-tab-content">
           <h3>Add Warrior to Roster</h3>
           <div class="form-row">
-            <input type="text" id="new-player-name" placeholder="In-Game Name">
-            <input type="text" id="new-player-kingdom" placeholder="Current Kingdom">
-            <input type="number" id="new-player-power" placeholder="Might (e.g. 50000000)">
+            <input type="text" id="new-player-name" placeholder="Player Name">
+            <input type="number" id="new-player-power" placeholder="Might">
             <button class="btn-gold-sm" id="add-player-btn">Add Warrior</button>
           </div>
           <p style="font-size:0.8rem; color:var(--text-muted); margin-top:8px">Warriors registered: <strong id="cms-player-count">0</strong></p>
@@ -133,9 +116,7 @@
           </div>
           <div class="table-container admin-table-container">
             <table class="roster-table">
-              <thead>
-                <tr><th>Player</th><th>ID</th><th>Current Kingdom</th><th>Might</th><th>Notes</th><th>Time</th></tr>
-              </thead>
+              <thead><tr><th>Player</th><th>ID</th><th>Current Kingdom</th><th>Might</th><th>Notes</th><th>Time</th></tr></thead>
               <tbody id="admin-duty-tbody"></tbody>
             </table>
           </div>
@@ -151,6 +132,7 @@
     </div>
   </div>
 
+  <script type="module" src="src/firebase-sync.js"></script>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>
