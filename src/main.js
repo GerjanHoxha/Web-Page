@@ -23,6 +23,18 @@ function resetStarterRoster() {
   return false;
 }
 
+window.addEventListener('firebase-data-updated', (event) => {
+  const section = event?.detail?.section;
+  if (section === 'warriors') {
+    const next = Array.isArray(window.firebaseData?.state?.warriors) ? window.firebaseData.state.warriors : loadPlayers();
+    players = next;
+    if (window._currentPage === 'roster') renderTable();
+  }
+  if (section === 'councilOfficers' && window._currentPage === 'leadership') {
+    navigate('leadership');
+  }
+});
+
 // Boot
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -99,6 +111,8 @@ function formatNumber(val) {
 }
 
 function loadPlayers() {
+  const firebasePlayers = Array.isArray(window.firebaseData?.state?.warriors) ? window.firebaseData.state.warriors : null;
+  if (firebasePlayers) return firebasePlayers;
   try {
     const saved = JSON.parse(localStorage.getItem(PLAYER_STORAGE_KEY) || '[]');
     return Array.isArray(saved) ? saved : [];
@@ -109,6 +123,9 @@ function loadPlayers() {
 
 function savePlayers() {
   localStorage.setItem(PLAYER_STORAGE_KEY, JSON.stringify(players));
+  if (window.firebaseData?.writeSection) {
+    window.firebaseData.writeSection('warriors', players).catch(() => {});
+  }
 }
 
 function renderHome() {
@@ -208,7 +225,7 @@ function afterStats() {
 }
 
 function renderLeadership() {
-  const raw = Array.isArray(window.firebaseData?.state?.councilOfficers) ? window.firebaseData.state.councilOfficers : JSON.parse(localStorage.getItem('k500_officers') || '[]');
+  const raw = window.firebaseData?.read('councilOfficers') || JSON.parse(localStorage.getItem('k500_officers') || '[]');
   const officers = Array.isArray(raw) && raw.length ? raw : leaders;
   const slots = Array.from({ length: 8 }, (_, i) => officers[i] || { name: 'Open Slot', role: 'Awaiting assignment', alliance: 'xHTx', desc: 'This council position is empty until the admin fills it in.' });
   const cards = slots.map(o => `
