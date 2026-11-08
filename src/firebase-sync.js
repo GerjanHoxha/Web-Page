@@ -148,7 +148,12 @@ function refreshStats() {
   try { stats = JSON.parse(localStorage.getItem('k500_custom_stats') || '{}'); } catch {}
   for (const [id, value] of [['stat-power', stats.power], ['stat-alliances', stats.alliances], ['stat-days', stats.days]]) {
     const element = document.getElementById(id);
-    if (element) { element.dataset.target = Number(value) || 0; element.textContent = formatMight(value); }
+    if (element) {
+      const formatted = formatMight(value);
+      const target = String(Number(value) || 0);
+      if (element.dataset.target !== target) element.dataset.target = target;
+      if (element.textContent !== formatted) element.textContent = formatted;
+    }
   }
   document.getElementById('stat-kills')?.closest('.stat-card')?.remove();
 }
@@ -322,8 +327,6 @@ function installChat() {
       push(ref(db, 'chat/messages'), message).catch(error => showError(error.message));
       const input = document.getElementById('chat-text'); if (input) input.value = '';
     }, true);
-    // Subscribe per rendered chat form. Firebase sends an initial snapshot, so
-    // revisiting the home view renders its current messages without observer-driven rendering.
     if (db) {
       chatUnsubscribe?.();
       chatUnsubscribe = onValue(chatRef, snapshot => {
@@ -331,17 +334,14 @@ function installChat() {
         chatMessages = Object.values(value).sort((a, b) => (a.sentAt || 0) - (b.sentAt || 0));
         renderChat();
       }, error => showError(error.message));
+    } else {
+      renderChat();
     }
   } else if (!form && currentChatForm) {
     currentChatForm = null;
     chatUnsubscribe?.();
     chatUnsubscribe = null;
   }
-}
-
-if (db) {
-  // Chat rendering is driven only by Firebase snapshots, never by DOM observation.
-  // installChat subscribes when a chat form enters the SPA and unsubscribes when it leaves.
 }
 
 function enhancePage() {
@@ -352,14 +352,13 @@ function enhancePage() {
   refreshPageData();
 }
 
+// Observe only direct route replacements in the SPA content root. Enhancements
+// and data refreshes mutate descendants of this root, so those writes cannot
+// retrigger this observer and form a self-sustaining navigation loop.
 const pageContent = document.getElementById('page-content');
 if (pageContent) {
-  const observer = new MutationObserver(records => {
-    // Ignore chat subtree mutations, including those produced by renderChat().
-    const pageChanges = records.some(record => !record.target.closest?.('#chat-messages'));
-    if (pageChanges) enhancePage();
-  });
-  observer.observe(pageContent, { childList: true, subtree: true });
+  const observer = new MutationObserver(() => enhancePage());
+  observer.observe(pageContent, { childList: true });
 }
 document.addEventListener('DOMContentLoaded', enhancePage);
 window.addEventListener('firebase-data-updated', refreshPageData);
