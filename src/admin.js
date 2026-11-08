@@ -93,23 +93,26 @@ export class AdminEngine {
   }
 
   _loadStats() {
-    const s = JSON.parse(localStorage.getItem('k500_custom_stats') || JSON.stringify(defaultStats));
+    const s = window.firebaseData?.read?.('stats') || JSON.parse(localStorage.getItem('k500_custom_stats') || JSON.stringify(defaultStats));
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-    set('edit-stat-power', s.power);
-    set('edit-stat-kills', s.kills);
-    set('edit-stat-alliances', s.alliances);
-    set('edit-stat-days', s.days);
+    set('edit-stat-power', s.power ?? defaultStats.power);
+    set('edit-stat-kills', s.kills ?? 0);
+    set('edit-stat-alliances', s.alliances ?? defaultStats.alliances);
+    set('edit-stat-days', s.days ?? defaultStats.days);
   }
 
   _saveStats() {
     const get = id => parseInt(document.getElementById(id)?.value) || 0;
     const stats = {
       power: get('edit-stat-power') || defaultStats.power,
-      kills: get('edit-stat-kills') || defaultStats.kills,
+      kills: get('edit-stat-kills') || 0,
       alliances: get('edit-stat-alliances') || defaultStats.alliances,
       days: get('edit-stat-days') || defaultStats.days
     };
     localStorage.setItem('k500_custom_stats', JSON.stringify(stats));
+    if (window.firebaseData?.writeSection) {
+      window.firebaseData.writeSection('stats', stats).catch(() => {});
+    }
     if (window._currentPage === 'stats') window.navigateSPA('stats');
     this._toast('✅ Kingdom Stats saved!');
     this.audio?.playClick();
@@ -118,14 +121,15 @@ export class AdminEngine {
   _renderOfficers() {
     const container = document.getElementById('officers-editor-list');
     if (!container) return;
-    const saved = JSON.parse(localStorage.getItem('k500_officers') || JSON.stringify(leaders));
-    container.innerHTML = saved.map((o, i) => `
+    const saved = Array.isArray(window.firebaseData?.read?.('councilOfficers')) ? window.firebaseData.read('councilOfficers') : (JSON.parse(localStorage.getItem('k500_officers') || JSON.stringify(leaders)) || []);
+    const slots = Array.from({ length: 8 }, (_, i) => saved[i] || { name: '', role: '', alliance: 'xHTx', photo: '', desc: '' });
+    container.innerHTML = slots.map((o, i) => `
       <div class="officer-edit-item glass-card" style="margin-bottom:12px;padding:14px">
         <h4 style="color:var(--gold);margin-bottom:8px">Officer Slot #${i + 1}</h4>
         <div class="form-row">
-          <input type="text" id="off-name-${i}" value="${o.name}" placeholder="Officer Name">
-          <input type="text" id="off-role-${i}" value="${o.role}" placeholder="Title/Role">
-          <input type="text" id="off-ally-${i}" value="${o.alliance}" placeholder="Alliance Tag">
+          <input type="text" id="off-name-${i}" value="${o.name || ''}" placeholder="Officer Name">
+          <input type="text" id="off-role-${i}" value="${o.role || ''}" placeholder="Title/Role">
+          <input type="text" id="off-ally-${i}" value="${o.alliance || 'xHTx'}" placeholder="Alliance Tag">
         </div>
         <div class="form-group" style="margin-top:8px">
           <label style="font-size:0.8rem;color:var(--text-muted)">Photo URL</label>
@@ -139,17 +143,19 @@ export class AdminEngine {
   }
 
   _saveOfficers() {
-    const saved = JSON.parse(localStorage.getItem('k500_officers') || JSON.stringify(leaders));
-    for (let i = 0; i < 8; i++) {
-      if (!saved[i]) continue;
-      const g = id => document.getElementById(id)?.value.trim();
-      saved[i].name = g(`off-name-${i}`) || saved[i].name;
-      saved[i].role = g(`off-role-${i}`) || saved[i].role;
-      saved[i].alliance = g(`off-ally-${i}`) || saved[i].alliance;
-      saved[i].photo = g(`off-photo-${i}`) || saved[i].photo;
-      saved[i].desc = g(`off-desc-${i}`) || saved[i].desc;
+    const slots = Array.from({ length: 8 }, (_, i) => ({
+      name: document.getElementById(`off-name-${i}`)?.value.trim() || '',
+      role: document.getElementById(`off-role-${i}`)?.value.trim() || '',
+      alliance: document.getElementById(`off-ally-${i}`)?.value.trim() || 'xHTx',
+      photo: document.getElementById(`off-photo-${i}`)?.value.trim() || '',
+      desc: document.getElementById(`off-desc-${i}`)?.value.trim() || ''
+    }));
+    localStorage.setItem('k500_officers', JSON.stringify(slots));
+    if (window.firebaseData?.writeSection) {
+      window.firebaseData.writeSection('councilOfficers', slots).catch(error => {
+        this._toast('❌ Council save failed: ' + (error?.message || 'Firebase unavailable'));
+      });
     }
-    localStorage.setItem('k500_officers', JSON.stringify(saved));
     if (window._currentPage === 'leadership') window.navigateSPA('leadership');
     this._toast('✅ Council Officers updated!');
     this.audio?.playClick();
@@ -184,7 +190,7 @@ export class AdminEngine {
   }
 
   _loadActivityFeed() {
-    const items = JSON.parse(localStorage.getItem('k500_activity_feed') || '[]');
+    const items = Array.isArray(window.firebaseData?.read?.('activityFeed')) ? window.firebaseData.read('activityFeed') : JSON.parse(localStorage.getItem('k500_activity_feed') || '[]');
     const preview = document.getElementById('activity-feed-preview');
     if (!preview) return;
     if (!items.length) {
@@ -206,28 +212,24 @@ export class AdminEngine {
   }
 
   _saveActivityFeed() {
-    const titleInput = document.getElementById('activity-title-input');
-    const textInput = document.getElementById('activity-text-input');
-    const timeInput = document.getElementById('activity-time-input');
-
-    const title = titleInput?.value.trim();
-    const text = textInput?.value.trim();
-    const time = timeInput?.value.trim() || 'Just now';
-
-    if (!title && !text) {
-      this._toast('❌ Enter title or description!');
+    const editor = document.getElementById('activity-feed-editor');
+    const raw = editor?.value || '';
+    const items = (raw || '').split(/\n+/).map(line => line.trim()).filter(Boolean).map(line => {
+      const [icon = '⚔️', title = 'War Activity', text = '', time = 'Just now'] = line.split('|');
+      return { icon: icon.trim(), title: title.trim(), text: text.trim(), time: time.trim() || 'Just now' };
+    });
+    if (!items.length) {
+      this._toast('❌ Add at least one feed entry.');
       return;
     }
-
-    const items = JSON.parse(localStorage.getItem('k500_activity_feed') || '[]');
-    items.unshift({ icon: '⚔️', title: title || 'War Activity', text: text || '', time });
-    if (items.length > 20) items.pop();
-
-    localStorage.setItem('k500_activity_feed', JSON.stringify(items));
-    if (titleInput) titleInput.value = '';
-    if (textInput) textInput.value = '';
-    if (timeInput) timeInput.value = '';
-
+    const merged = [...items, ...((Array.isArray(window.firebaseData?.read?.('activityFeed')) ? window.firebaseData.read('activityFeed') : JSON.parse(localStorage.getItem('k500_activity_feed') || '[]')) || [])].slice(0, 20);
+    localStorage.setItem('k500_activity_feed', JSON.stringify(merged));
+    if (window.firebaseData?.writeSection) {
+      window.firebaseData.writeSection('activityFeed', merged).catch(error => {
+        this._toast('❌ Activity save failed: ' + (error?.message || 'Firebase unavailable'));
+      });
+    }
+    if (editor) editor.value = '';
     this._loadActivityFeed();
     this._toast('✅ Activity entry added!');
     this.audio?.playClick();
@@ -235,9 +237,12 @@ export class AdminEngine {
   }
 
   _deleteActivityItem(idx) {
-    const items = JSON.parse(localStorage.getItem('k500_activity_feed') || '[]');
+    const items = Array.isArray(window.firebaseData?.read?.('activityFeed')) ? [...window.firebaseData.read('activityFeed')] : JSON.parse(localStorage.getItem('k500_activity_feed') || '[]');
     items.splice(idx, 1);
     localStorage.setItem('k500_activity_feed', JSON.stringify(items));
+    if (window.firebaseData?.writeSection) {
+      window.firebaseData.writeSection('activityFeed', items).catch(() => {});
+    }
     this._loadActivityFeed();
     this._toast('✅ Entry removed!');
     this.audio?.playClick();
@@ -245,7 +250,11 @@ export class AdminEngine {
 
   _clearActivityFeed() {
     if (confirm('🔥 Clear ALL activity feed entries?')) {
-      localStorage.removeItem('k500_activity_feed');
+      const empty = [];
+      localStorage.setItem('k500_activity_feed', JSON.stringify(empty));
+      if (window.firebaseData?.writeSection) {
+        window.firebaseData.writeSection('activityFeed', empty).catch(() => {});
+      }
       this._loadActivityFeed();
       this._toast('✅ Feed cleared!');
       this.audio?.playClick();

@@ -25,12 +25,11 @@
       </div>
       <div class="nav-links">
         <a href="#" class="nav-link active" data-page="home">HOME</a>
+        <a href="#" class="nav-link" data-page="leadership">COUNCIL</a>
         <a href="#" class="nav-link" data-page="why">WHY 500</a>
       </div>
       <div class="nav-actions">
-        <button id="admin-trigger" class="btn-outline-sm" type="button">
-          🔒 <span>Admin</span>
-        </button>
+        <button id="admin-trigger" class="btn-outline-sm" type="button">🔒 <span>Admin</span></button>
       </div>
     </div>
   </nav>
@@ -124,15 +123,9 @@
 
   <script>
     const siteAudio = document.getElementById('site-audio');
-
-    // Try unmuted autoplay on page load. Browsers may block it until a user gesture.
     siteAudio.play().catch(() => {});
-
-    // If autoplay is blocked, try to start playback on the first site button/link click.
     document.addEventListener('click', event => {
-      if (event.target.closest('button, a')) {
-        siteAudio.play().catch(() => {});
-      }
+      if (event.target.closest('button, a')) siteAudio.play().catch(() => {});
     });
   </script>
   <script type="module" src="src/firebase-sync.js"></script>
