@@ -1,8 +1,6 @@
 /**
  * KINGDOM 500 - SPA ROUTER & MAIN ENTRY POINT
  * Single Page Application — content swaps in #page-content WITHOUT page reload.
- * The YouTube iframe lives in index.html and is NEVER recreated, so Valhalla Calling
- * plays continuously no matter which view (home / stats / leadership / roster / apply) is open.
  */
 
 import { CanvasEngine } from './canvas.js';
@@ -36,20 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
   audioEngine = new AudioEngine();
   i18nEngine = new I18nEngine();
   adminEngine = new AdminEngine(audioEngine, { get players() { return players; }, formatNumber, savePlayers });
-
-  const sndBtn = document.getElementById('snd-btn');
-  if (sndBtn) {
-    sndBtn.addEventListener('click', () => {
-      audioEngine.toggleSoundtrack(playing => sndBtn.classList.toggle('active', playing));
-    });
-  }
-
-  document.getElementById('lang-en')?.addEventListener('click', () => {
-    audioEngine.playClick(); i18nEngine.setLang('en');
-  });
-  document.getElementById('lang-ru')?.addEventListener('click', () => {
-    audioEngine.playClick(); i18nEngine.setLang('ru');
-  });
 
   document.getElementById('logo-home')?.addEventListener('click', () => navigate('home'));
 
@@ -154,7 +138,7 @@ function renderHome() {
               <stop offset="0%" stop-color="#fff5c0"/><stop offset="50%" stop-color="#e6b84c"/><stop offset="100%" stop-color="#8a5a12"/>
             </linearGradient>
           </defs>
-          <g><rect x="196" y="20" width="8" height="190" rx="4" fill="#5c3818"/><path d="M200 24 C150 4 112 40 128 88 C160 72 186 72 200 84Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="3"/><path d="M200 84 L250 120 L200 180 L150 120 Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="3"/><circle cx="200" cy="120" r="32" fill="rgba(255,255,255,0.15)"/><path d="M200 28 L180 112 L200 172 L220 112 Z" fill="none" stroke="#f5d069" stroke-width="4" opacity="0.9"/></g>
+          <g><rect x="196" y="20" width="8" height="190" rx="4" fill="#5c3818"/><path d="M200 24 C150 4 112 40 128 88 C160 72 186 72 200 84Z" fill="url(#gold-grad)" stroke="#3a2205" stroke-width="4"/></g>
         </svg>
         <div class="hero-plaque"><h1>KINGDOM 500</h1></div>
       </div>
@@ -482,7 +466,6 @@ function handleRollSubmit(e) {
   }
 
   document.getElementById('roll-form').reset();
-  audioEngine.playClick();
 }
 
 function animateCounter(el, target) {
@@ -556,7 +539,6 @@ function initChat() {
     if (liveChatChannel) liveChatChannel.postMessage({ type: 'chat', message });
     renderChatMessages();
     document.getElementById('chat-text').value = '';
-    audioEngine.playClick();
   });
 }
 
